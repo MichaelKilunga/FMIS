@@ -17,7 +17,7 @@ export default function Modal({
   if (!isOpen || !mounted) return null
 
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm transition-opacity" onClick={onClose} />
       <div className="relative glass-card w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto animate-fade-in shadow-2xl border border-slate-700/50">
          <div className="flex items-center justify-between mb-6">

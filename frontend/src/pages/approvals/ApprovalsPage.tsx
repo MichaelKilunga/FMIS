@@ -212,7 +212,7 @@ export default function ApprovalsPage() {
 
       {/* Comment / Confirm Modal */}
       {commenting && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-[10000] p-4">
           <div className="glass-card p-6 w-full max-w-md animate-fade-in">
             <h3 className={clsx('text-lg font-semibold mb-1', commenting.action === 'approve' ? 'text-emerald-400' : 'text-red-400')}>
               {commenting.action === 'approve' ? '✅ Confirm Approval' : '❌ Confirm Rejection'}

@@ -122,7 +122,7 @@ export default function Layout() {
       {/* Main content */}
       <div className="flex flex-col flex-1 overflow-hidden">
         {/* Header */}
-        <header className="flex items-center justify-between px-6 py-4 border-b border-slate-700/50 bg-slate-900/80 backdrop-blur-sm">
+        <header className="flex items-center justify-between px-6 py-4 border-b border-slate-700/50 bg-slate-900/80 backdrop-blur-sm z-40 relative">
           <div className="flex items-center gap-3">
             {/* Online indicator */}
             <div className={clsx('flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full', isOnline ? 'bg-emerald-900/50 text-emerald-400' : 'bg-yellow-900/50 text-yellow-400 animate-pulse-slow')}>
@@ -149,7 +149,7 @@ export default function Layout() {
                 <ChevronDown size={14} className="text-slate-400" />
               </button>
               {profileOpen && (
-                <div className="absolute right-0 top-full mt-1 w-48 glass-card py-1 z-50 animate-fade-in">
+                <div className="absolute right-0 top-full mt-1 w-48 glass-card py-1 z-[9000] animate-fade-in">
                   <button onClick={handleLogout}
                     className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-red-400 hover:bg-red-900/20 transition-colors">
                     <LogOut size={15} /> Sign out
