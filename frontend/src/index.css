@@ -1,0 +1,144 @@
+@import "tailwindcss";
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+  --color-primary: #3B82F6;
+  --color-secondary: #0F172A;
+  --color-accent: #10B981;
+  --font-sans: 'Inter', sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root { height: 100%; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font-sans);
+  background-color: #0F172A;
+  color: #F1F5F9;
+  -webkit-font-smoothing: antialiased;
+}
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #1E293B; }
+::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+/* Glass Card */
+.glass-card {
+  background: rgba(30, 41, 59, 0.7);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(71, 85, 105, 0.3);
+  border-radius: 12px;
+}
+
+/* Gradient border */
+.gradient-border {
+  position: relative;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+  border-radius: 12px;
+  padding: 1px;
+}
+.gradient-border > * { background: #1E293B; border-radius: 11px; }
+
+/* Sidebar active state */
+.sidebar-active {
+  background: linear-gradient(135deg, rgba(59,130,246,0.2), rgba(16,185,129,0.1));
+  border-left: 3px solid var(--color-primary);
+}
+
+/* Status badges — pure CSS, no @apply */
+.badge-draft        { display: inline-block; background: #334155; color: #CBD5E1; font-size: 0.75rem; font-weight: 600; padding: 2px 10px; border-radius: 9999px; }
+.badge-submitted    { display: inline-block; background: #1e3a5f; color: #93C5FD; font-size: 0.75rem; font-weight: 600; padding: 2px 10px; border-radius: 9999px; }
+.badge-under_review { display: inline-block; background: #3b2f00; color: #FDE68A; font-size: 0.75rem; font-weight: 600; padding: 2px 10px; border-radius: 9999px; }
+.badge-approved     { display: inline-block; background: #064e3b; color: #6EE7B7; font-size: 0.75rem; font-weight: 600; padding: 2px 10px; border-radius: 9999px; }
+.badge-rejected     { display: inline-block; background: #450a0a; color: #FCA5A5; font-size: 0.75rem; font-weight: 600; padding: 2px 10px; border-radius: 9999px; }
+.badge-posted       { display: inline-block; background: #2e1065; color: #C4B5FD; font-size: 0.75rem; font-weight: 600; padding: 2px 10px; border-radius: 9999px; }
+.badge-paid         { display: inline-block; background: #064e3b; color: #6EE7B7; font-size: 0.75rem; font-weight: 600; padding: 2px 10px; border-radius: 9999px; }
+.badge-overdue      { display: inline-block; background: #450a0a; color: #FCA5A5; font-size: 0.75rem; font-weight: 600; padding: 2px 10px; border-radius: 9999px; }
+
+/* Animations */
+@keyframes fadeIn   { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes slideIn  { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+@keyframes pulse-slow { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+.animate-fade-in  { animation: fadeIn 0.3s ease forwards; }
+.animate-slide-in { animation: slideIn 0.3s ease forwards; }
+.animate-pulse-slow { animation: pulse-slow 2s ease-in-out infinite; }
+
+/* KPI cards */
+.kpi-card {
+  background: rgba(30, 41, 59, 0.7);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(71, 85, 105, 0.3);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  cursor: default;
+  transition: border-color 0.2s;
+}
+.kpi-card:hover { border-color: rgba(59,130,246,0.5); }
+.kpi-value { font-size: 1.875rem; font-weight: 700; letter-spacing: -0.025em; }
+.kpi-label { font-size: 0.875rem; color: #94A3B8; font-weight: 500; }
+.kpi-trend { font-size: 0.75rem; font-weight: 600; }
+
+/* Table */
+.fmis-table { width: 100%; font-size: 0.875rem; text-align: left; color: #CBD5E1; border-collapse: collapse; }
+.fmis-table thead { font-size: 0.75rem; color: #94A3B8; text-transform: uppercase; background: rgba(30,41,59,0.5); }
+.fmis-table thead th { padding: 12px 16px; font-weight: 600; letter-spacing: 0.05em; }
+.fmis-table tbody tr { border-top: 1px solid rgba(51,65,85,0.5); transition: background 0.15s; }
+.fmis-table tbody tr:hover { background: rgba(51,65,85,0.3); }
+.fmis-table tbody td { padding: 14px 16px; }
+
+/* Form inputs */
+.fmis-input {
+  width: 100%;
+  background: #1E293B;
+  border: 1px solid #475569;
+  color: #F1F5F9;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.fmis-input::placeholder { color: #64748B; }
+.fmis-input:focus { border-color: #3B82F6; box-shadow: 0 0 0 2px rgba(59,130,246,0.25); }
+.fmis-label { display: block; font-size: 0.875rem; font-weight: 500; color: #CBD5E1; margin-bottom: 6px; }
+.fmis-select { width: 100%; background: #1E293B; border: 1px solid #475569; color: #F1F5F9; border-radius: 8px; padding: 10px 12px; font-size: 0.875rem; outline: none; cursor: pointer; appearance: none; transition: border-color 0.15s; }
+.fmis-select:focus { border-color: #3B82F6; }
+
+/* Buttons */
+.btn-primary {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 16px; background: #2563EB; color: #fff; font-weight: 600;
+  border-radius: 8px; font-size: 0.875rem; border: none; cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-primary:hover { background: #3B82F6; }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-secondary {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 16px; background: #334155; color: #E2E8F0; font-weight: 600;
+  border-radius: 8px; font-size: 0.875rem; border: none; cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-secondary:hover { background: #475569; }
+.btn-danger {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 16px; background: #B91C1C; color: #fff; font-weight: 600;
+  border-radius: 8px; font-size: 0.875rem; border: none; cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-danger:hover { background: #DC2626; }
+.btn-ghost {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 8px 12px; color: #94A3B8; border-radius: 8px;
+  font-size: 0.875rem; background: transparent; border: none; cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-ghost:hover { color: #F1F5F9; background: #334155; }

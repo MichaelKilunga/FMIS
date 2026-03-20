@@ -1,0 +1,200 @@
+import type { RecurringBill, CreateBillData, UpdateBillData } from '../types/bill';
+import type { ProductivityStats, ForecastDataPoint, FinancialHealth } from '../types';
+import axios from 'axios'
+
+const api = axios.create({
+  baseURL: '/api/v1',
+  headers: {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+  },
+})
+
+// Attach token on every request
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('fmis_token')
+  if (token) config.headers.Authorization = `Bearer ${token}`
+  return config
+})
+
+// Handle 401 globally
+api.interceptors.response.use(
+  (res) => res,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('fmis_token')
+      window.location.href = '/login'
+    }
+    return Promise.reject(error)
+  }
+)
+
+export default api
+
+// --- Module API helpers ---
+export const authApi = {
+  login: (email: string, password: string) => api.post('/auth/login', { email, password }),
+  register: (data: Record<string, unknown>) => api.post('/auth/register', data),
+  logout: () => api.post('/auth/logout'),
+  me: () => api.get('/auth/me'),
+  updateProfile: (data: FormData) => api.post('/auth/profile', data, { headers: { 'Content-Type': 'multipart/form-data' } }),
+}
+
+export const transactionsApi = {
+  list: (params?: Record<string, unknown>) => api.get('/transactions', { params }),
+  get: (id: number) => api.get(`/transactions/${id}`),
+  create: (data: Record<string, unknown>) => api.post('/transactions', data),
+  update: (id: number, data: Record<string, unknown>) => api.put(`/transactions/${id}`, data),
+  delete: (id: number) => api.delete(`/transactions/${id}`),
+  submit: (id: number) => api.post(`/transactions/${id}/submit`),
+  post: (id: number) => api.post(`/transactions/${id}/post`),
+}
+
+export const categoriesApi = {
+  list: (params?: Record<string, unknown>) => api.get('/transaction-categories', { params }),
+  get: (id: number) => api.get(`/transaction-categories/${id}`),
+  create: (data: Record<string, unknown>) => api.post('/transaction-categories', data),
+  update: (id: number, data: Record<string, unknown>) => api.put(`/transaction-categories/${id}`, data),
+  delete: (id: number) => api.delete(`/transaction-categories/${id}`),
+}
+
+export const accountsApi = {
+  list: () => api.get('/accounts'),
+  get: (id: number) => api.get(`/accounts/${id}`),
+  create: (data: Record<string, unknown>) => api.post('/accounts', data),
+  update: (id: number, data: Record<string, unknown>) => api.put(`/accounts/${id}`, data),
+  delete: (id: number) => api.delete(`/accounts/${id}`),
+}
+
+export const approvalsApi = {
+  list: (params?: Record<string, unknown>) => api.get('/approvals', { params }),
+  get: (id: number) => api.get(`/approvals/${id}`),
+  approve: (id: number, comment?: string) => api.post(`/approvals/${id}/approve`, { comment }),
+  reject: (id: number, comment: string) => api.post(`/approvals/${id}/reject`, { comment }),
+}
+
+export const invoicesApi = {
+  list: (params?: Record<string, unknown>) => api.get('/invoices', { params }),
+  get: (id: number) => api.get(`/invoices/${id}`),
+  create: (data: Record<string, unknown>) => api.post('/invoices', data),
+  update: (id: number, data: Record<string, unknown>) => api.put(`/invoices/${id}`, data),
+  delete: (id: number) => api.delete(`/invoices/${id}`),
+  download: (id: number) => api.get(`/invoices/${id}/download`, { responseType: 'blob' }),
+  send: (id: number) => api.post(`/invoices/${id}/send`),
+  markAsPaid: (id: number) => api.post(`/invoices/${id}/pay`),
+}
+
+export const budgetsApi = {
+  list: (params?: Record<string, unknown>) => api.get('/budgets', { params }),
+  get: (id: number) => api.get(`/budgets/${id}`),
+  create: (data: Record<string, unknown>) => api.post('/budgets', data),
+  update: (id: number, data: Record<string, unknown>) => api.put(`/budgets/${id}`, data),
+  delete: (id: number) => api.delete(`/budgets/${id}`),
+}
+
+export const analyticsApi = {
+  summary: (refresh?: boolean) => api.get('/analytics/summary', { params: { refresh } }),
+  cashFlow: (months?: number, refresh?: boolean) => api.get('/analytics/cash-flow', { params: { months, refresh } }),
+  incomeVsExpenses: (from?: string, to?: string, refresh?: boolean) => api.get('/analytics/income-vs-expenses', { params: { from, to, refresh } }),
+  trends: (weeks?: number, refresh?: boolean) => api.get('/analytics/trends', { params: { weeks, refresh } }),
+  budgetOverview: () => api.get('/analytics/budget-overview'),
+  productivity: (refresh?: boolean) => api.get<ProductivityStats>('/analytics/productivity', { params: { refresh } }),
+  forecasting: (refresh?: boolean) => api.get<ForecastDataPoint[]>('/analytics/forecasting', { params: { refresh } }),
+  financialHealth: (refresh?: boolean) => api.get<FinancialHealth>('/analytics/financial-health', { params: { refresh } }),
+  customerInsights: (refresh?: boolean) => api.get('/analytics/customer-insights', { params: { refresh } }),
+}
+
+export const systemAdminApi = {
+  stats: () => api.get('/system-admin/stats'),
+  health: () => api.get('/system-admin/health'),
+  activity: () => api.get('/system-admin/activity'),
+}
+
+export const settingsApi = {
+  all: (group?: string, system?: boolean) => api.get('/settings', { params: { group, system: system ? 'true' : undefined } }),
+  get: (key: string, system?: boolean) => api.get(`/settings/${key}`, { params: { system: system ? 'true' : undefined } }),
+  set: (key: string, value: unknown, group?: string, type?: string, is_system_wide?: boolean) => api.post('/settings', { key, value, group, type, is_system_wide }),
+  setBulk: (settings: Array<{ key: string; value: unknown; group?: string; type?: string }>, is_system_wide?: boolean) => api.post('/settings/bulk', { settings, is_system_wide }),
+  updateBranding: (data: FormData) => api.post('/settings/branding', data, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  getSystemSettings: () => api.get('/system-settings'),
+}
+
+export const workflowsApi = {
+  list: () => api.get('/workflows'),
+  create: (data: Record<string, unknown>) => api.post('/workflows', data),
+  update: (id: number, data: Record<string, unknown>) => api.put(`/workflows/${id}`, data),
+  delete: (id: number) => api.delete(`/workflows/${id}`),
+}
+
+export const fraudApi = {
+  listRules: () => api.get('/fraud/rules'),
+  createRule: (data: Record<string, unknown>) => api.post('/fraud/rules', data),
+  updateRule: (id: number, data: Record<string, unknown>) => api.put(`/fraud/rules/${id}`, data),
+  deleteRule: (id: number) => api.delete(`/fraud/rules/${id}`),
+  listAlerts: (params?: Record<string, unknown>) => api.get('/fraud/alerts', { params }),
+  resolveAlert: (id: number, data: Record<string, unknown>) => api.post(`/fraud/alerts/${id}/resolve`, data),
+}
+
+export const auditLogsApi = {
+  list: (params?: Record<string, unknown>) => api.get('/audit-logs', { params }),
+  get: (id: number) => api.get(`/audit-logs/${id}`),
+}
+
+export const usersApi = {
+  list: (params?: Record<string, unknown>) => api.get('/users', { params }),
+  get: (id: number) => api.get(`/users/${id}`),
+  create: (data: Record<string, unknown>) => api.post('/users', data),
+  update: (id: number, data: Record<string, unknown>) => api.put(`/users/${id}`, data),
+  delete: (id: number) => api.delete(`/users/${id}`),
+}
+
+export const syncApi = {
+  pushChanges: (changes: unknown[]) => api.post('/sync/push-changes', { changes }),
+}
+
+export const notificationsApi = {
+  list: () => api.get('/notifications'),
+  markAsRead: (id: string) => api.post(`/notifications/${id}/read`),
+  markAllAsRead: () => api.post('/notifications/read-all'),
+}
+
+export const reportsApi = {
+  preview: (params: Record<string, unknown>) => api.get('/reports/preview', { params }),
+  export: (params: Record<string, unknown>) => api.get('/reports/export', { params, responseType: 'blob' }),
+}
+
+export const electionsApi = {
+  current: () => api.get('/elections/current'),
+  initiate: () => api.post('/elections/initiate'),
+  vote: (candidate_id: number) => api.post('/elections/vote', { candidate_id }),
+  history: () => api.get('/elections/history'),
+}
+
+export const debtsApi = {
+  list: (params?: Record<string, unknown>) => api.get('/debts', { params }),
+  get: (id: number) => api.get(`/debts/${id}`),
+  create: (data: Record<string, unknown>) => api.post('/debts', data),
+  update: (id: number, data: Record<string, unknown>) => api.put(`/debts/${id}`, data),
+  delete: (id: number) => api.delete(`/debts/${id}`),
+  recordPayment: (id: number, data: Record<string, unknown>) => api.post(`/debts/${id}/pay`, data),
+}
+
+export const billsApi = {
+  list: (params?: Record<string, unknown>) => api.get('/recurring-bills', { params }),
+  get: (id: number) => api.get(`/recurring-bills/${id}`),
+  create: (data: CreateBillData) => api.post('/recurring-bills', data),
+  update: (id: number, data: UpdateBillData) => api.put(`/recurring-bills/${id}`, data),
+  delete: (id: number) => api.delete(`/recurring-bills/${id}`),
+  pause: (id: number) => api.post(`/recurring-bills/${id}/pause`),
+  resume: (id: number) => api.post(`/recurring-bills/${id}/resume`),
+}
+
+export const tasksApi = {
+  list: (params?: Record<string, unknown>) => api.get('/tasks', { params }),
+  get: (id: number) => api.get(`/tasks/${id}`),
+  create: (data: Record<string, unknown>) => api.post('/tasks', data),
+  update: (id: number, data: Record<string, unknown>) => api.put(`/tasks/${id}`, data),
+  delete: (id: number) => api.delete(`/tasks/${id}`),
+  reportProgress: (id: number, data: { progress: number; comment?: string; status?: string }) => api.post(`/tasks/${id}/progress`, data),
+  stats: (params?: { user_id?: number }) => api.get('/tasks-stats', { params }),
+}
