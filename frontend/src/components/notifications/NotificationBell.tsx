@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { Bell, Check, Info, AlertTriangle, CheckCircle, XCircle } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { notificationsApi } from '../../services/api'
-import { Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import clsx from 'clsx'
 import toast from 'react-hot-toast'
 
@@ -25,6 +25,7 @@ export interface AppNotification {
 }
 
 export default function NotificationBell() {
+  const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const [notifications, setNotifications] = useState<AppNotification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
@@ -64,10 +65,10 @@ export default function NotificationBell() {
   const markAsRead = async (id: string) => {
     try {
       await notificationsApi.markAsRead(id)
-      setNotifications(prev =>
-        prev.map(n => n.id === id ? { ...n, read_at: new Date().toISOString() } : n)
+      setNotifications((prev: AppNotification[]) =>
+        prev.map((n: AppNotification) => n.id === id ? { ...n, read_at: new Date().toISOString() } : n)
       )
-      setUnreadCount(prev => Math.max(0, prev - 1))
+      setUnreadCount((prev: number) => Math.max(0, prev - 1))
     } catch {
       toast.error('Failed to mark notification as read')
     }
@@ -76,7 +77,7 @@ export default function NotificationBell() {
   const markAllAsRead = async () => {
     try {
       await notificationsApi.markAllAsRead()
-      setNotifications(prev => prev.map(n => ({ ...n, read_at: new Date().toISOString() })))
+      setNotifications((prev: AppNotification[]) => prev.map((n: AppNotification) => ({ ...n, read_at: new Date().toISOString() })))
       setUnreadCount(0)
       toast.success('All marked as read')
     } catch {
@@ -90,6 +91,36 @@ export default function NotificationBell() {
       case 'warning': return <AlertTriangle size={16} className="text-yellow-400" />
       case 'error': return <XCircle size={16} className="text-red-400" />
       default: return <Info size={16} className="text-blue-400" />
+    }
+  }
+
+  const handleActionClick = async (n: AppNotification) => {
+    setOpen(false)
+    if (!n.read_at) {
+      await markAsRead(n.id).catch(() => console.error('Failed to mark as read'))
+    }
+    
+    if (n.data.action?.url) {
+      let url = n.data.action.url
+      if (url.startsWith('http')) {
+        window.location.href = url
+        return
+      }
+      
+      // Ensure internal URLs are absolute within the app context
+      // If the URL doesn't start with /app/ but is meant to be internal, fix it
+      if (!url.startsWith('/app/') && !url.startsWith('/')) {
+        url = `/app/${url}`
+      } else if (url.startsWith('/') && !url.startsWith('/app/')) {
+        // If it starts with / but not /app/, it might be a public page or missing prefix
+        // For FMIS, most things are under /app/
+        if (!['/login', '/register', '/privacy', '/terms'].some(p => url.startsWith(p))) {
+           url = `/app${url}`
+        }
+      }
+      
+      console.log('Navigating to notification URL:', url)
+      navigate(url)
     }
   }
 
@@ -141,13 +172,12 @@ export default function NotificationBell() {
                       
                       <div className="flex items-center justify-between mt-2">
                         {n.data.action ? (
-                          <Link
-                            to={n.data.action.url}
-                            onClick={() => { setOpen(false); !n.read_at && markAsRead(n.id); }}
-                            className="text-xs text-blue-400 hover:text-blue-300 font-medium transition-colors"
+                          <button
+                            onClick={() => handleActionClick(n)}
+                            className="text-xs text-blue-400 hover:text-blue-300 font-medium transition-colors cursor-pointer"
                           >
                             {n.data.action.label}
-                          </Link>
+                          </button>
                         ) : <div />}
                         
                         <span className="text-[10px] text-slate-500">

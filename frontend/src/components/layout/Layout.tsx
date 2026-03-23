@@ -91,21 +91,20 @@ export default function Layout() {
       {/* Sidebar */}
       <aside className={clsx(
         'flex flex-col border-r border-slate-700/50 bg-slate-900/95 backdrop-blur-sm transition-all duration-300 z-[60]',
+        // Desktop vs Mobile visibility
+        mobileMenuOpen ? 'fixed inset-y-0 left-0 flex w-64 translate-x-0' : 'hidden md:flex -translate-x-full md:translate-x-0',
         // Desktop sizing
-        'hidden md:flex',
-        sidebarOpen ? 'w-64' : 'w-16',
-        // Mobile sizing (drawer)
-        'fixed inset-y-0 left-0 transform md:relative md:translate-x-0',
-        mobileMenuOpen ? 'translate-x-0 flex w-64' : '-translate-x-full md:flex'
+        sidebarOpen ? 'md:w-64' : 'md:w-16',
+        'transform md:relative'
       )}>
         {/* Logo */}
         <div className="flex items-center gap-3 px-4 py-5 border-b border-slate-700/50">
           {tenant?.logo
             ? <img src={tenant.logo} alt={tenant.name} className="h-8 w-auto object-contain" />
-            : <div className="h-8 w-8 rounded-lg flex items-center justify-center text-white font-bold text-sm"
+            : <div className="h-8 w-8 rounded-lg flex items-center justify-center text-white font-bold text-sm shadow-lg"
                    style={{ background: `linear-gradient(135deg, var(--color-primary), var(--color-accent))` }}>F</div>
           }
-          {sidebarOpen && (
+          {(sidebarOpen || mobileMenuOpen) && (
             <div className="animate-fade-in overflow-hidden">
               <h1 className="text-white font-bold text-sm truncate">{tenant?.name || 'FMIS'}</h1>
               <p className="text-slate-400 text-xs capitalize">{tenant?.plan || 'Enterprise'}</p>
@@ -123,7 +122,7 @@ export default function Layout() {
                 : 'text-slate-400 hover:text-slate-100 hover:bg-slate-700/40'
             )}>
               <Icon className="shrink-0" size={18} />
-              {sidebarOpen && <span className="truncate animate-fade-in">{label}</span>}
+              {(sidebarOpen || mobileMenuOpen) && <span className="truncate animate-fade-in">{label}</span>}
             </NavLink>
           ))}
         </nav>
