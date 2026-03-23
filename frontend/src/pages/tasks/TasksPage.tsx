@@ -112,6 +112,7 @@ export default function TasksPage() {
     },
     {
       header: 'Assigned To',
+      priority: 'mobile-hidden' as const,
       accessor: (task: Task) => (
         <div className="flex items-center gap-2">
           {task.assignee ? (
@@ -128,6 +129,7 @@ export default function TasksPage() {
     },
     {
       header: 'Priority',
+      priority: 'mobile-hidden' as const,
       accessor: (task: Task) => (
         <span className={clsx(
           'px-2 py-1 rounded-full text-xs font-medium uppercase tracking-wider',

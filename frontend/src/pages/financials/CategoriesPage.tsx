@@ -116,6 +116,7 @@ export default function CategoriesPage() {
     },
     {
       header: 'Type',
+      priority: 'mobile-hidden' as const,
       accessor: (cat: TransactionCategory) => (
         <div className={clsx(
           'flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold inline-flex w-fit',
@@ -128,6 +129,7 @@ export default function CategoriesPage() {
     },
     {
       header: 'Description',
+      priority: 'mobile-hidden' as const,
       accessor: (cat: any) => (
         <span className="text-slate-400 text-sm">{cat.description || '—'}</span>
       )

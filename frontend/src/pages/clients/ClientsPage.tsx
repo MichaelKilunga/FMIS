@@ -108,6 +108,7 @@ export default function ClientsPage() {
     },
     {
       header: 'Contact Info',
+      priority: 'mobile-hidden',
       accessor: (client: Client) => (
         <div className="space-y-1">
           {client.email && (
@@ -125,6 +126,7 @@ export default function ClientsPage() {
     },
     {
       header: 'Address',
+      priority: 'mobile-hidden',
       accessor: (client: Client) => (
         <div className="flex items-center gap-1.5 text-xs text-slate-400 max-w-[200px] truncate">
           <MapPin size={12} className="shrink-0" />

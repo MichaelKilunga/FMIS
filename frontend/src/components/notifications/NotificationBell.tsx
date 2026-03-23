@@ -102,18 +102,24 @@ export default function NotificationBell() {
     
     if (n.data.action?.url) {
       let url = n.data.action.url
+      
+      // Handle absolute URLs
       if (url.startsWith('http')) {
-        window.location.href = url
-        return
+        const urlObj = new URL(url)
+        if (urlObj.origin === window.location.origin) {
+          // It's an internal URL but absolute, strip origin and use navigate
+          url = urlObj.pathname + urlObj.search + urlObj.hash
+        } else {
+          // Truly external
+          window.location.href = url
+          return
+        }
       }
       
-      // Ensure internal URLs are absolute within the app context
-      // If the URL doesn't start with /app/ but is meant to be internal, fix it
+      // Normalize internal App URLs
       if (!url.startsWith('/app/') && !url.startsWith('/')) {
         url = `/app/${url}`
       } else if (url.startsWith('/') && !url.startsWith('/app/')) {
-        // If it starts with / but not /app/, it might be a public page or missing prefix
-        // For FMIS, most things are under /app/
         if (!['/login', '/register', '/privacy', '/terms'].some(p => url.startsWith(p))) {
            url = `/app${url}`
         }

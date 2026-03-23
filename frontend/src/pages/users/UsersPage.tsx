@@ -78,6 +78,7 @@ export default function UsersPage() {
     },
     {
       header: 'Department',
+      priority: 'mobile-hidden' as const,
       accessor: (user: User) => <span className="text-slate-400">{user.department || '—'}</span>
     },
     {
@@ -104,6 +105,7 @@ export default function UsersPage() {
     },
     {
       header: 'Status',
+      priority: 'mobile-hidden' as const,
       accessor: (user: User) => (
         <div className="flex items-center gap-1.5">
           {user.is_active ? <UserCheck size={14} className="text-emerald-400" /> : <UserX size={14} className="text-red-400" />}

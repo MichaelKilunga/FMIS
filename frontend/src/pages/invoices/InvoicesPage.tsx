@@ -215,10 +215,12 @@ export default function InvoicesPage() {
     },
     {
       header: 'Issue Date',
+      priority: 'mobile-hidden',
       accessor: (inv: Invoice) => <span className="text-slate-400 text-xs">{format(new Date(inv.issue_date), 'dd MMM yyyy')}</span>
     },
     {
       header: 'Due Date',
+      priority: 'mobile-hidden',
       accessor: (inv: Invoice) => <span className="text-slate-400 text-xs">{inv.due_date ? format(new Date(inv.due_date), 'dd MMM yyyy') : '—'}</span>
     },
     {

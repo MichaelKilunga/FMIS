@@ -144,6 +144,7 @@ export default function AccountsPage() {
     },
     {
       header: 'Usage Restrictions',
+      priority: 'mobile-hidden' as const,
       accessor: (acc: Account) => (
         <div className="flex flex-wrap gap-1">
           {(!acc.allowed_transaction_types || acc.allowed_transaction_types.length === 0 || acc.allowed_transaction_types.length === 3) ? (
@@ -165,6 +166,7 @@ export default function AccountsPage() {
     },
     {
       header: 'Bank/Provider',
+      priority: 'mobile-hidden' as const,
       accessor: (acc: Account) => (
         <span className="text-slate-400">{acc.bank_name || '—'}</span>
       )

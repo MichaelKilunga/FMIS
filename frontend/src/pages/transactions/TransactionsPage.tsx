@@ -8,6 +8,7 @@ import clsx from 'clsx'
 import { useOnlineStore, useSettingsStore } from '../../store'
 import Modal from '../../components/Modal'
 import { useForm, type UseFormReturn } from 'react-hook-form'
+import DataTable from '../../components/DataTable'
 
 const statusColors: Record<string, string> = {
   draft: 'badge-draft', submitted: 'badge-submitted', under_review: 'badge-under_review',
@@ -170,6 +171,74 @@ export default function TransactionsPage() {
   // Statuses where editing/deleting is allowed
   const isEditable = (status: string) => ['draft', 'rejected'].includes(status)
 
+  const columns = [
+    {
+      header: 'Reference',
+      priority: 'mobile-hidden' as const,
+      accessor: (tx: Transaction) => <span className="font-mono text-xs text-slate-400">{tx.reference}</span>
+    },
+    {
+      header: 'Description',
+      accessor: (tx: Transaction) => (
+        <div className="flex flex-col">
+          <span className="font-medium text-slate-200">{tx.description}</span>
+          {tx.category && <span className="text-[10px] text-slate-500 flex items-center gap-1 uppercase tracking-wider"><Tag size={10}/> {tx.category.name}</span>}
+        </div>
+      )
+    },
+    {
+      header: 'Type',
+      accessor: (tx: Transaction) => (
+        <span className={clsx('text-xs font-semibold px-2 py-0.5 rounded-full',
+          tx.type === 'income' ? 'bg-emerald-900/50 text-emerald-400' : 'bg-red-900/50 text-red-400')}>
+          {tx.type}
+        </span>
+      )
+    },
+    {
+      header: 'Amount',
+      accessor: (tx: Transaction) => (
+        <span className={tx.type === 'income' ? 'text-emerald-400 font-semibold' : 'text-red-400 font-semibold'}>
+          {tx.type === 'income' ? '+' : '-'}{fmt(tx.amount, tx.currency)}
+        </span>
+      )
+    },
+    {
+      header: 'Date',
+      priority: 'mobile-hidden' as const,
+      accessor: (tx: Transaction) => <span className="text-slate-400 text-xs">{format(new Date(tx.transaction_date), 'dd MMM yyyy')}</span>
+    },
+    {
+      header: 'Status',
+      accessor: (tx: Transaction) => <span className={statusColors[tx.status] || 'badge-draft'}>{tx.status.replace('_', ' ')}</span>
+    },
+    {
+      header: 'Actions',
+      accessor: (tx: Transaction) => (
+        <div className="flex items-center gap-1.5">
+          {tx.status === 'draft' && (
+            <button onClick={() => handleSubmitForApproval(tx.id)} title="Submit for Approval"
+              className="p-1.5 rounded-md text-blue-400 hover:bg-blue-900/30 transition-colors">
+              <Send size={14} />
+            </button>
+          )}
+          {isEditable(tx.status) && (
+            <button onClick={() => openEdit(tx)} title="Edit"
+              className="p-1.5 rounded-md text-slate-400 hover:bg-slate-700 hover:text-white transition-colors">
+              <Pencil size={14} />
+            </button>
+          )}
+          {tx.status === 'draft' && (
+            <button onClick={() => setDeleteTx(tx)} title="Delete"
+              className="p-1.5 rounded-md text-rose-400 hover:bg-rose-900/30 transition-colors">
+              <Trash2 size={14} />
+            </button>
+          )}
+        </div>
+      )
+    }
+  ]
+
   const txFormFields = (form: UseFormReturn<TxFormData>) => (
     <div className="space-y-4">
       <div>
@@ -279,79 +348,17 @@ export default function TransactionsPage() {
       </div>
 
       {/* Table */}
-      <div className="glass-card overflow-hidden">
-        {loading ? (
-          <div className="flex justify-center py-16"><Loader2 className="animate-spin text-blue-500" size={28} /></div>
-        ) : (
-          <table className="fmis-table">
-            <thead>
-              <tr>
-                <th>Reference</th>
-                <th>Description</th>
-                <th>Type</th>
-                <th>Amount</th>
-                <th>Date</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data?.data.map(tx => (
-                <tr key={tx.id}>
-                  <td><span className="font-mono text-xs text-slate-400">{tx.reference}</span></td>
-                  <td>
-                    <div className="flex flex-col">
-                      <span className="font-medium text-slate-200">{tx.description}</span>
-                      {tx.category && <span className="text-[10px] text-slate-500 flex items-center gap-1 uppercase tracking-wider"><Tag size={10}/> {tx.category.name}</span>}
-                    </div>
-                  </td>
-                  <td>
-                    <span className={clsx('text-xs font-semibold px-2 py-0.5 rounded-full',
-                      tx.type === 'income' ? 'bg-emerald-900/50 text-emerald-400' : 'bg-red-900/50 text-red-400')}>
-                      {tx.type}
-                    </span>
-                  </td>
-                  <td>
-                    <span className={tx.type === 'income' ? 'text-emerald-400 font-semibold' : 'text-red-400 font-semibold'}>
-                      {tx.type === 'income' ? '+' : '-'}{fmt(tx.amount, tx.currency)}
-                    </span>
-                  </td>
-                  <td className="text-slate-400 text-xs">{format(new Date(tx.transaction_date), 'dd MMM yyyy')}</td>
-                  <td><span className={statusColors[tx.status] || 'badge-draft'}>{tx.status.replace('_', ' ')}</span></td>
-                  <td>
-                    <div className="flex items-center gap-1.5">
-                      {/* Submit for approval — draft only */}
-                      {tx.status === 'draft' && (
-                        <button onClick={() => handleSubmitForApproval(tx.id)} title="Submit for Approval"
-                          className="p-1.5 rounded-md text-blue-400 hover:bg-blue-900/30 transition-colors">
-                          <Send size={14} />
-                        </button>
-                      )}
-                      {/* Edit — draft or rejected */}
-                      {isEditable(tx.status) && (
-                        <button onClick={() => openEdit(tx)} title="Edit"
-                          className="p-1.5 rounded-md text-slate-400 hover:bg-slate-700 hover:text-white transition-colors">
-                          <Pencil size={14} />
-                        </button>
-                      )}
-                      {/* Delete — draft only */}
-                      {tx.status === 'draft' && (
-                        <button onClick={() => setDeleteTx(tx)} title="Delete"
-                          className="p-1.5 rounded-md text-rose-400 hover:bg-rose-900/30 transition-colors">
-                          <Trash2 size={14} />
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {(data?.data.length ?? 0) === 0 && (
-                <tr><td colSpan={7} className="text-center py-12 text-slate-500">No transactions found</td></tr>
-              )}
-            </tbody>
-          </table>
-        )}
-      </div>
+      <DataTable 
+        columns={columns as any}
+        data={data}
+        loading={loading}
+        onPageChange={(page) => {
+          // Note: The transactions API currently doesn't seem to support pagination in the list call used here
+          // but load() will trigger a refresh. If we want proper pagination, we'd need to pass the page.
+          load() 
+        }}
+        emptyMessage="No transactions found"
+      />
 
       {!isOnline && (
         <div className="glass-card p-3 border-yellow-500/30 text-yellow-400 text-sm flex items-center gap-2">
