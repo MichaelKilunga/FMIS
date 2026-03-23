@@ -74,6 +74,23 @@ export const useOnlineStore = create<OnlineState>((set) => ({
   setPendingCount: (pendingSyncCount) => set({ pendingSyncCount }),
 }))
 
+// --- PWA Store ---
+interface PwaState {
+  deferredPrompt: any | null
+  isInstallable: boolean
+  isInstalled: boolean
+  setDeferredPrompt: (prompt: any | null) => void
+  setIsInstalled: (isInstalled: boolean) => void
+}
+
+export const usePwaStore = create<PwaState>((set) => ({
+  deferredPrompt: null,
+  isInstallable: false,
+  isInstalled: false,
+  setDeferredPrompt: (deferredPrompt) => set({ deferredPrompt, isInstallable: !!deferredPrompt }),
+  setIsInstalled: (isInstalled) => set({ isInstalled }),
+}))
+
 // --- Theme / Branding ---
 export function applyBranding(tenant: Partial<Tenant>): void {
   const root = document.documentElement

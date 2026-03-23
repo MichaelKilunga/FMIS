@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { Bell, Check, Info, AlertTriangle, CheckCircle, XCircle } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { notificationsApi } from '../../services/api'
@@ -28,6 +29,7 @@ export default function NotificationBell() {
   const [notifications, setNotifications] = useState<AppNotification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const ref = useRef<HTMLDivElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     fetchNotifications()
@@ -37,7 +39,11 @@ export default function NotificationBell() {
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (ref.current && !ref.current.contains(event.target as Node)) {
+      const target = event.target as Node
+      const isInsideTrigger = ref.current && ref.current.contains(target)
+      const isInsidePanel = panelRef.current && panelRef.current.contains(target)
+      
+      if (!isInsideTrigger && !isInsidePanel) {
         setOpen(false)
       }
     }
@@ -99,8 +105,8 @@ export default function NotificationBell() {
         )}
       </button>
 
-      {open && (
-        <div className="fixed right-4 top-20 w-[calc(100vw-32px)] sm:w-96 bg-slate-800 border border-slate-700/60 rounded-2xl py-2 z-[9999] animate-fade-in shadow-2xl">
+      {open && createPortal(
+        <div ref={panelRef} className="fixed right-4 top-20 w-[calc(100vw-32px)] sm:w-96 bg-slate-800 border border-slate-700/60 rounded-2xl py-2 z-[9999] animate-fade-in shadow-2xl">
           <div className="flex items-center justify-between px-4 pb-2 border-b border-slate-700/50">
             <h3 className="font-semibold text-slate-200">Notifications</h3>
             {unreadCount > 0 && (
@@ -137,7 +143,7 @@ export default function NotificationBell() {
                         {n.data.action ? (
                           <Link
                             to={n.data.action.url}
-                            onClick={() => !n.read_at && markAsRead(n.id)}
+                            onClick={() => { setOpen(false); !n.read_at && markAsRead(n.id); }}
                             className="text-xs text-blue-400 hover:text-blue-300 font-medium transition-colors"
                           >
                             {n.data.action.label}
@@ -163,7 +169,8 @@ export default function NotificationBell() {
               </div>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )

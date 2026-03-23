@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 
-import { useAuthStore, useOnlineStore, useSettingsStore, applyBranding } from './store'
+import { useAuthStore, useOnlineStore, useSettingsStore, applyBranding, usePwaStore } from './store'
 import { authApi, settingsApi } from './services/api'
 import { setupNetworkListeners, syncOfflineRequests } from './services/syncService'
 
@@ -43,15 +43,41 @@ export default function App() {
   const { setSettings } = useSettingsStore()
   const { setOnline, setPendingCount } = useOnlineStore()
 
-  // Sync online/offline status
+  const { setDeferredPrompt, setIsInstalled } = usePwaStore()
+
+  // Sync online/offline status and PWA install prompt
   useEffect(() => {
     setupNetworkListeners()
     
+    const handleBeforeInstallPrompt = (e: any) => {
+      e.preventDefault()
+      setDeferredPrompt(e)
+    }
+
+    const handleAppInstalled = () => {
+      setDeferredPrompt(null)
+      setIsInstalled(true)
+    }
+
+    window.addEventListener('online', () => {}) // Handled in syncService but keeping for effect
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+    window.addEventListener('appinstalled', handleAppInstalled)
+
+    // Check if already installed
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      setIsInstalled(true)
+    }
+
     // Initial sync check on mount if online
     if (navigator.onLine) {
       syncOfflineRequests()
     }
-  }, [])
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+      window.removeEventListener('appinstalled', handleAppInstalled)
+    }
+  }, [setDeferredPrompt, setIsInstalled])
 
   // Restore session and load settings on mount
   useEffect(() => {

@@ -11,6 +11,7 @@ import { authApi } from '../../services/api'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
 import NotificationBell from '../notifications/NotificationBell'
+import PwaInstallBanner from './PwaInstallBanner'
 
 interface NavItem {
   to: string
@@ -135,9 +136,9 @@ export default function Layout() {
       </aside>
 
       {/* Main content */}
-      <div className="flex flex-col flex-1 overflow-hidden">
+      <div className="flex flex-col flex-1 overflow-hidden relative">
         {/* Header */}
-        <header className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-slate-700/50 bg-slate-900/80 backdrop-blur-sm z-40 relative sticky top-0">
+        <header className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-slate-700/50 bg-slate-900/80 backdrop-blur-sm z-[100] relative sticky top-0">
           <div className="flex items-center gap-3">
             {/* Mobile Menu Toggle */}
             <button 
@@ -190,6 +191,7 @@ export default function Layout() {
           </div>
         </main>
       </div>
+      <PwaInstallBanner />
     </div>
   )
 }
