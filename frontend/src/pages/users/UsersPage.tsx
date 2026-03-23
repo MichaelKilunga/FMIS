@@ -78,11 +78,12 @@ export default function UsersPage() {
     },
     {
       header: 'Department',
-      priority: 'mobile-hidden' as const,
-      accessor: (user: User) => <span className="text-slate-400">{user.department || '—'}</span>
+      priority: 4,
+      accessor: (user: User) => <span className="text-slate-400 text-xs">{user.department || '—'}</span>
     },
     {
       header: 'Role',
+      priority: 3,
       accessor: (user: User) => (
         <div className="flex gap-1.5 flex-wrap">
           {user.roles.map(role => (
@@ -105,7 +106,7 @@ export default function UsersPage() {
     },
     {
       header: 'Status',
-      priority: 'mobile-hidden' as const,
+      priority: 2,
       accessor: (user: User) => (
         <div className="flex items-center gap-1.5">
           {user.is_active ? <UserCheck size={14} className="text-emerald-400" /> : <UserX size={14} className="text-red-400" />}

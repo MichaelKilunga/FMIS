@@ -41,7 +41,7 @@ export default function ElectionPage() {
   const [loading, setLoading] = useState(true)
   const [voting, setVoting] = useState(false)
 
-  const isDirector = user?.roles.includes('director')
+  const isDirector = user?.roles?.includes('director')
 
   useEffect(() => {
     fetchData()

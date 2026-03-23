@@ -54,7 +54,7 @@ export default function AuditLogsPage() {
     },
     {
       header: 'Model',
-      priority: 'mobile-hidden' as const,
+      priority: 3,
       accessor: (log: AuditLog) => (
         <span className="text-slate-500 text-xs">
           {log.model_type ? `${log.model_type.split('\\').pop()} #${log.model_id}` : '—'}
@@ -63,11 +63,12 @@ export default function AuditLogsPage() {
     },
     {
       header: 'IP',
-      priority: 'mobile-hidden' as const,
+      priority: 4,
       accessor: (log: AuditLog) => <span className="text-slate-500 text-xs font-mono">{log.ip_address || '—'}</span>
     },
     {
       header: 'Timestamp',
+      priority: 3,
       accessor: (log: AuditLog) => <span className="text-slate-500 text-xs">{format(new Date(log.created_at), 'dd MMM yy HH:mm:ss')}</span>
     }
   ]

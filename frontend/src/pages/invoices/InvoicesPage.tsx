@@ -100,7 +100,7 @@ export default function InvoicesPage() {
 
       // Also load clients for the form
       const cRes = await clientsApi.list({ per_page: 100 })
-      setClients(cRes.data.data)
+      setClients(Array.isArray(cRes.data?.data) ? cRes.data.data : [])
     }
     catch { toast.error('Failed to load data') } finally { setLoading(false) }
   }
@@ -183,7 +183,9 @@ export default function InvoicesPage() {
     }
   }
 
-  const fmt = (n: number, cur = 'TZS') => {
+  const fmt = (n: number | null | undefined, cur = 'TZS') => {
+    if (n === null || n === undefined || isNaN(Number(n))) return '—'
+    n = Number(n)
     const symbol = (settings['currency.symbol'] as string) || ''
     if (symbol) {
       return `${symbol} ${new Intl.NumberFormat('en-US', { minimumFractionDigits: 2 }).format(n)}`
@@ -198,33 +200,48 @@ export default function InvoicesPage() {
   const columns = [
     {
       header: 'Number',
+      priority: 4,
       accessor: (inv: Invoice) => <span className="font-mono text-blue-400 text-xs">{inv.number}</span>
     },
     {
       header: 'Client',
       accessor: (inv: Invoice) => (
-        <div>
-          <span className="font-medium text-slate-200">{inv.client_name}</span>
-          {inv.client_email && <p className="text-xs text-slate-500">{inv.client_email}</p>}
+        <div className="max-w-[120px] md:max-w-none">
+          <div className="font-medium text-slate-200 truncate">{inv.client_name}</div>
+          {inv.client_email && <p className="text-[10px] text-slate-500 truncate hidden md:block">{inv.client_email}</p>}
         </div>
       )
     },
     {
       header: 'Amount',
+      priority: 2,
       accessor: (inv: Invoice) => <span className="font-semibold text-slate-200">{fmt(inv.total, inv.currency)}</span>
     },
     {
       header: 'Issue Date',
-      priority: 'mobile-hidden',
-      accessor: (inv: Invoice) => <span className="text-slate-400 text-xs">{format(new Date(inv.issue_date), 'dd MMM yyyy')}</span>
+      priority: 3,
+      accessor: (inv: Invoice) => {
+        try {
+          return <span className="text-slate-400 text-xs">{inv.issue_date ? format(new Date(inv.issue_date), 'dd MMM yyyy') : '—'}</span>
+        } catch {
+          return <span className="text-slate-400 text-xs">—</span>
+        }
+      }
     },
     {
       header: 'Due Date',
-      priority: 'mobile-hidden',
-      accessor: (inv: Invoice) => <span className="text-slate-400 text-xs">{inv.due_date ? format(new Date(inv.due_date), 'dd MMM yyyy') : '—'}</span>
+      priority: 3,
+      accessor: (inv: Invoice) => {
+        try {
+          return <span className="text-slate-400 text-xs">{inv.due_date ? format(new Date(inv.due_date), 'dd MMM yyyy') : '—'}</span>
+        } catch {
+          return <span className="text-slate-400 text-xs">—</span>
+        }
+      }
     },
     {
       header: 'Status',
+      priority: 2,
       accessor: (inv: Invoice) => <span className={statusBadge[inv.status] || 'badge-draft'}>{inv.status}</span>
     },
     {
@@ -241,7 +258,7 @@ export default function InvoicesPage() {
               <Send size={14} />
             </button>
           )}
-          {inv.status !== 'paid' && user?.roles.includes('tenant-admin') && (
+          {inv.status !== 'paid' && user?.roles?.includes('tenant-admin') && (
             <button onClick={() => markAsPaid(inv.id)} title="Mark as Paid"
               className="p-1.5 rounded text-slate-400 hover:text-emerald-400 hover:bg-emerald-900/20 transition-colors">
               <CheckCircle size={14} />
@@ -259,7 +276,7 @@ export default function InvoicesPage() {
           <h1 className="text-2xl font-bold text-white">Invoices</h1>
           <p className="text-slate-400 text-sm">Manage and track all invoices</p>
         </div>
-        {user?.roles.includes('tenant-admin') && (
+        {user?.roles?.includes('tenant-admin') && (
           <button onClick={() => setShowForm(true)} className="btn-primary">
             <Plus size={16} /> New Invoice
           </button>
@@ -286,7 +303,7 @@ export default function InvoicesPage() {
                 <label className="fmis-label">Select Existing Client (Optional)</label>
                 <select onChange={onClientSelect} className="fmis-select mb-2">
                   <option value="">-- New Client --</option>
-                  {clients.map(c => <option key={c.id} value={c.id}>{c.name} {c.email ? `(${c.email})` : ''}</option>)}
+                  {(clients || []).filter(Boolean).map(c => <option key={c.id} value={c.id}>{c.name} {c.email ? `(${c.email})` : ''}</option>)}
                 </select>
                 
                 <label className="fmis-label">Client / Company Name <span className="text-red-400">*</span></label>

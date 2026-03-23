@@ -129,12 +129,14 @@ export default function BudgetsPage() {
     }
   }
 
-  const fmt = (n: number) => {
+  const fmt = (n: number | null | undefined) => {
+    if (n === null || n === undefined || isNaN(Number(n))) return '--'
+    const num = Number(n)
     const symbol = (settings['currency.symbol'] as string) || ''
     if (symbol) {
-      return `${symbol} ${new Intl.NumberFormat('en-US', { minimumFractionDigits: 1, notation: 'compact', maximumFractionDigits: 1 }).format(n)}`
+      return `${symbol} ${new Intl.NumberFormat('en-US', { minimumFractionDigits: 1, notation: 'compact', maximumFractionDigits: 1 }).format(num)}`
     }
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: defaultCurrency, notation: 'compact', maximumFractionDigits: 1 }).format(n)
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: defaultCurrency, notation: 'compact', maximumFractionDigits: 1 }).format(num)
   }
 
   const budgetFormFields = (form: UseFormReturn<BudgetFormData>) => (
@@ -244,7 +246,7 @@ export default function BudgetsPage() {
                     </div>
                     <div className="flex items-center gap-2">
                        {warning && !exceeded && <AlertTriangle size={16} className="text-yellow-400" />}
-                       {user?.roles.includes('tenant-admin') && (
+                       {user?.roles?.includes('tenant-admin') && (
                          <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
                            <button onClick={() => openEdit(budget)} className="p-1.5 hover:bg-slate-700 rounded-md text-slate-400 hover:text-white transition-colors">
                              <Pencil size={14} />

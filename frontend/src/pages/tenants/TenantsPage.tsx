@@ -61,12 +61,12 @@ export default function TenantsPage() {
     },
     {
       header: 'Slug',
-      priority: 'mobile-hidden' as const,
+      priority: 5,
       accessor: (t: Tenant) => <span className="text-slate-400">{t.slug}</span>
     },
     {
       header: 'Plan',
-      priority: 'mobile-hidden' as const,
+      priority: 4,
       accessor: (t: Tenant) => <span className="px-2.5 py-1 bg-slate-700 rounded-md text-xs capitalize">{t.plan}</span>
     },
     {

@@ -83,7 +83,7 @@ export default function DebtsPage() {
     },
     {
       header: 'Type',
-      priority: 'mobile-hidden' as const,
+      priority: 3,
       accessor: (debt: Debt) => (
         <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${
           debt.type === 'payable' ? 'bg-red-900/30 text-red-400' : 'bg-emerald-900/30 text-emerald-400'
@@ -95,6 +95,7 @@ export default function DebtsPage() {
     },
     {
       header: 'Amount',
+      priority: 2,
       accessor: (debt: Debt) => (
         <div>
           <span className="font-semibold text-slate-200">
@@ -106,7 +107,7 @@ export default function DebtsPage() {
     },
     {
       header: 'Due Date',
-      priority: 'mobile-hidden' as const,
+      priority: 3,
       accessor: (debt: Debt) => (
         <div className="flex items-center gap-1.5 text-slate-400 text-xs">
           <Calendar size={12} />

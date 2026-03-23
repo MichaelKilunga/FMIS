@@ -25,7 +25,7 @@ export default function TasksPage() {
   })
   const [stats, setStats] = useState<any>(null)
 
-  const isManagement = user?.roles.some(r => ['director', 'manager', 'tenant-admin'].includes(r))
+  const isManagement = user?.roles?.some(r => ['director', 'manager', 'tenant-admin'].includes(r))
 
   const fetchTasks = async (page = 1) => {
     setLoading(true)
@@ -112,7 +112,7 @@ export default function TasksPage() {
     },
     {
       header: 'Assigned To',
-      priority: 'mobile-hidden' as const,
+      priority: 3,
       accessor: (task: Task) => (
         <div className="flex items-center gap-2">
           {task.assignee ? (
@@ -129,7 +129,7 @@ export default function TasksPage() {
     },
     {
       header: 'Priority',
-      priority: 'mobile-hidden' as const,
+      priority: 2,
       accessor: (task: Task) => (
         <span className={clsx(
           'px-2 py-1 rounded-full text-xs font-medium uppercase tracking-wider',
@@ -146,6 +146,7 @@ export default function TasksPage() {
     },
     {
       header: 'Status',
+      priority: 2,
       accessor: (task: Task) => (
         <div className="flex flex-col gap-1">
           <span className={clsx(
@@ -170,6 +171,7 @@ export default function TasksPage() {
     },
     {
       header: 'Due Date',
+      priority: 3,
       accessor: (task: Task) => (
         <div className="flex items-center gap-1.5 text-sm text-slate-300">
           <Calendar size={14} className="text-slate-500" />
@@ -181,7 +183,7 @@ export default function TasksPage() {
       header: 'Actions',
       accessor: (task: Task) => (
         <div className="flex items-center gap-2">
-          {task.status === 'pending' && task.assigned_to === user?.id && (
+          {task.status === 'pending' && task?.assigned_to === user?.id && (
             <button 
               onClick={(e) => { e.stopPropagation(); handleQuickStatus(task, 'in_progress'); }} 
               className="p-1.5 rounded-lg bg-blue-900/20 text-blue-400 hover:bg-blue-900/40 transition-colors"
@@ -190,7 +192,7 @@ export default function TasksPage() {
               <Play size={16} />
             </button>
           )}
-          {task.status !== 'completed' && task.assigned_to === user?.id && (
+          {task.status !== 'completed' && task?.assigned_to === user?.id && (
             <button 
               onClick={(e) => { e.stopPropagation(); handleQuickStatus(task, 'completed'); }} 
               className="p-1.5 rounded-lg bg-emerald-900/20 text-emerald-400 hover:bg-emerald-900/40 transition-colors"

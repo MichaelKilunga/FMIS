@@ -174,20 +174,21 @@ export default function TransactionsPage() {
   const columns = [
     {
       header: 'Reference',
-      priority: 'mobile-hidden' as const,
+      priority: 4,
       accessor: (tx: Transaction) => <span className="font-mono text-xs text-slate-400">{tx.reference}</span>
     },
     {
       header: 'Description',
       accessor: (tx: Transaction) => (
-        <div className="flex flex-col">
-          <span className="font-medium text-slate-200">{tx.description}</span>
-          {tx.category && <span className="text-[10px] text-slate-500 flex items-center gap-1 uppercase tracking-wider"><Tag size={10}/> {tx.category.name}</span>}
+        <div className="max-w-[140px] md:max-w-none">
+          <div className="font-medium text-slate-200 truncate">{tx.description}</div>
+          {tx.category && <span className="text-[10px] text-slate-500 flex items-center gap-1 uppercase tracking-wider truncate"><Tag size={10}/> {tx.category.name}</span>}
         </div>
       )
     },
     {
       header: 'Type',
+      priority: 3,
       accessor: (tx: Transaction) => (
         <span className={clsx('text-xs font-semibold px-2 py-0.5 rounded-full',
           tx.type === 'income' ? 'bg-emerald-900/50 text-emerald-400' : 'bg-red-900/50 text-red-400')}>
@@ -197,6 +198,7 @@ export default function TransactionsPage() {
     },
     {
       header: 'Amount',
+      priority: 2,
       accessor: (tx: Transaction) => (
         <span className={tx.type === 'income' ? 'text-emerald-400 font-semibold' : 'text-red-400 font-semibold'}>
           {tx.type === 'income' ? '+' : '-'}{fmt(tx.amount, tx.currency)}
@@ -205,11 +207,12 @@ export default function TransactionsPage() {
     },
     {
       header: 'Date',
-      priority: 'mobile-hidden' as const,
+      priority: 3,
       accessor: (tx: Transaction) => <span className="text-slate-400 text-xs">{format(new Date(tx.transaction_date), 'dd MMM yyyy')}</span>
     },
     {
       header: 'Status',
+      priority: 2,
       accessor: (tx: Transaction) => <span className={statusColors[tx.status] || 'badge-draft'}>{tx.status.replace('_', ' ')}</span>
     },
     {
