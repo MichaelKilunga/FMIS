@@ -182,7 +182,14 @@ export default function TransactionsPage() {
           <label className="fmis-label flex items-center gap-1.5"><Wallet size={14} /> Account</label>
           <select {...form.register('account_id', { required: true })} className="fmis-select">
             <option value="">Select Account</option>
-            {accounts.map(acc => <option key={acc.id} value={acc.id}>{acc.name} ({fmt(acc.balance, acc.currency)})</option>)}
+            {accounts
+              .filter(acc => {
+                const txType = form.watch('type');
+                if (!acc.allowed_transaction_types || acc.allowed_transaction_types.length === 0) return true;
+                return acc.allowed_transaction_types.includes(txType as any);
+              })
+              .map(acc => <option key={acc.id} value={acc.id}>{acc.name} ({fmt(acc.balance, acc.currency)})</option>)
+            }
           </select>
         </div>
         <div>

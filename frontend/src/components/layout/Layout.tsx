@@ -28,6 +28,7 @@ const navItems: NavItem[] = [
   { to: '/app/transactions', label: 'Transactions',     icon: ArrowLeftRight },
   { to: '/app/approvals',    label: 'Approvals',        icon: CheckSquare },
   { to: '/app/invoices',     label: 'Invoices',         icon: FileText },
+  { to: '/app/clients',      label: 'Clients',          icon: Users },
   { to: '/app/billing',      label: 'Billing',          icon: FileText }, // Recurring bills
   { to: '/app/debts',        label: 'Debts',            icon: Coins },
   { to: '/app/accounts',     label: 'Accounts',         icon: Wallet },
@@ -51,6 +52,7 @@ export default function Layout() {
   const navigate = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [profileOpen, setProfileOpen] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   const isDirector = user?.roles.includes('director')
   const isManager  = user?.roles.includes('manager')
@@ -77,10 +79,23 @@ export default function Layout() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-slate-900">
+      {/* Mobile Sidebar Backdrop */}
+      {mobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 md:hidden animate-fade-in"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
       <aside className={clsx(
-        'flex flex-col border-r border-slate-700/50 bg-slate-900/95 backdrop-blur-sm transition-all duration-300 z-30',
-        sidebarOpen ? 'w-64' : 'w-16'
+        'flex flex-col border-r border-slate-700/50 bg-slate-900/95 backdrop-blur-sm transition-all duration-300 z-[60]',
+        // Desktop sizing
+        'hidden md:flex',
+        sidebarOpen ? 'w-64' : 'w-16',
+        // Mobile sizing (drawer)
+        'fixed inset-y-0 left-0 transform md:relative md:translate-x-0',
+        mobileMenuOpen ? 'translate-x-0 flex w-64' : '-translate-x-full md:flex'
       )}>
         {/* Logo */}
         <div className="flex items-center gap-3 px-4 py-5 border-b border-slate-700/50">
@@ -112,9 +127,9 @@ export default function Layout() {
           ))}
         </nav>
 
-        {/* Collapse toggle */}
+        {/* Collapse toggle (Desktop only) */}
         <button onClick={() => setSidebarOpen(s => !s)}
-          className="m-3 p-2 rounded-lg text-slate-500 hover:text-slate-300 hover:bg-slate-700/40 transition-colors">
+          className="hidden md:block m-3 p-2 rounded-lg text-slate-500 hover:text-slate-300 hover:bg-slate-700/40 transition-colors">
           {sidebarOpen ? <X size={18} /> : <Menu size={18} />}
         </button>
       </aside>
@@ -122,12 +137,22 @@ export default function Layout() {
       {/* Main content */}
       <div className="flex flex-col flex-1 overflow-hidden">
         {/* Header */}
-        <header className="flex items-center justify-between px-6 py-4 border-b border-slate-700/50 bg-slate-900/80 backdrop-blur-sm z-40 relative">
+        <header className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-slate-700/50 bg-slate-900/80 backdrop-blur-sm z-40 relative sticky top-0">
           <div className="flex items-center gap-3">
+            {/* Mobile Menu Toggle */}
+            <button 
+              onClick={() => setMobileMenuOpen(true)}
+              className="p-2 -ml-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 md:hidden"
+            >
+              <Menu size={20} />
+            </button>
+
             {/* Online indicator */}
-            <div className={clsx('flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full', isOnline ? 'bg-emerald-900/50 text-emerald-400' : 'bg-yellow-900/50 text-yellow-400 animate-pulse-slow')}>
+            <div className={clsx('flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full whitespace-nowrap', isOnline ? 'bg-emerald-900/50 text-emerald-400' : 'bg-yellow-900/50 text-yellow-400 animate-pulse-slow')}>
               {isOnline ? <Wifi size={12} /> : <WifiOff size={12} />}
-              {isOnline ? 'Online' : `Offline${pendingSyncCount > 0 ? ` · ${pendingSyncCount} pending` : ''}`}
+              <span className="hidden sm:inline">
+                {isOnline ? 'Online' : `Offline${pendingSyncCount > 0 ? ` · ${pendingSyncCount} pending` : ''}`}
+              </span>
             </div>
           </div>
 
@@ -138,15 +163,13 @@ export default function Layout() {
             {/* Profile */}
             <div className="relative">
               <button onClick={() => setProfileOpen(p => !p)}
-                className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-slate-700 transition-colors">
-                <img src={user?.avatar_url || ''} alt={user?.name} className="h-8 w-8 rounded-full object-cover" />
-                {sidebarOpen && (
-                  <div className="hidden sm:block text-left">
-                    <p className="text-sm font-medium text-slate-200">{user?.name}</p>
-                    <p className="text-xs text-slate-400 capitalize">{user?.roles[0]}</p>
-                  </div>
-                )}
-                <ChevronDown size={14} className="text-slate-400" />
+                className="flex items-center gap-2 p-1 rounded-lg hover:bg-slate-700 transition-colors">
+                <img src={user?.avatar_url || ''} alt={user?.name} className="h-8 w-8 rounded-full object-cover shrink-0" />
+                <div className="hidden sm:block text-left">
+                  <p className="text-sm font-medium text-slate-200 truncate max-w-[100px]">{user?.name}</p>
+                  <p className="text-xs text-slate-400 capitalize">{user?.roles[0]}</p>
+                </div>
+                <ChevronDown size={14} className="text-slate-400 shrink-0" />
               </button>
               {profileOpen && (
                 <div className="absolute right-0 top-full mt-1 w-48 glass-card py-1 z-[9000] animate-fade-in">

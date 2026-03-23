@@ -53,8 +53,26 @@ class InvoiceController extends Controller
 
         $tenantId = $request->user()->tenant_id;
 
+        // Auto-register or find client
+        $client = null;
+        if ($request->filled('client_id')) {
+            $client = \App\Models\Client::where('tenant_id', $tenantId)->find($request->client_id);
+        }
+
+        if (!$client && $request->filled('client_name')) {
+            $client = \App\Models\Client::firstOrCreate(
+                ['tenant_id' => $tenantId, 'name' => $request->client_name],
+                [
+                    'email'   => $request->client_email,
+                    'phone'   => $request->client_phone,
+                    'address' => $request->client_address,
+                ]
+            );
+        }
+
         $invoice = Invoice::create([
             'tenant_id'  => $tenantId,
+            'client_id'  => $client?->id,
             'created_by' => $request->user()->id,
             'number'     => $this->invoiceService->generateNumber($tenantId),
             ...$data,
@@ -101,6 +119,11 @@ class InvoiceController extends Controller
         ]);
 
         $before = $invoice->toArray();
+        
+        if (isset($data['client_id'])) {
+            $invoice->client_id = $data['client_id'];
+        }
+        
         $invoice->update($data);
 
         // If status changed to paid, record the payment transaction
@@ -143,9 +166,27 @@ class InvoiceController extends Controller
     public function send(Request $request, Invoice $invoice): JsonResponse
     {
         abort_if($invoice->tenant_id !== $request->user()->tenant_id, 403);
+        
         $invoice->update(['status' => 'sent', 'sent_at' => now()]);
-        // TODO: Queue email job with invoice PDF
+        
+        // Send notification to client if email exists
+        if ($invoice->client_email || ($invoice->client && $invoice->client->email)) {
+            $email = $invoice->client_email ?: $invoice->client->email;
+            
+            $notificationService = app(\App\Services\NotificationService::class);
+            $notificationService->notifyClient(
+                $email,
+                "New Invoice: #{$invoice->number}",
+                "You have received a new invoice from " . $request->user()->tenant->name . ". Total: " . $invoice->total . " " . $invoice->currency,
+                $invoice->tenant_id,
+                ['url' => config('app.frontend_url') . "/invoices/{$invoice->id}/view", 'label' => 'View Invoice'],
+                'info',
+                ['invoice_id' => $invoice->id]
+            );
+        }
+
         $this->audit->log('invoice_sent', $invoice);
-        return response()->json(['message' => 'Invoice marked as sent.']);
+        
+        return response()->json(['message' => 'Invoice marked as sent and notification dispatched.']);
     }
 }

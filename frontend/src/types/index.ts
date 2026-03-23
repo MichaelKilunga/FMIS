@@ -51,6 +51,7 @@ export interface Account {
   bank_name?: string
   color?: string
   is_active: boolean
+  allowed_transaction_types?: ('income' | 'expense' | 'transfer')[]
 }
 
 export type TransactionStatus = 'draft' | 'submitted' | 'under_review' | 'approved' | 'rejected' | 'posted'
@@ -80,7 +81,9 @@ export interface Transaction {
 }
 
 export * from './bill'
+export * from './debt'
 export * from './task'
+export * from './client'
 
 export type InvoiceStatus = 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled'
 

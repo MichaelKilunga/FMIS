@@ -10,7 +10,7 @@ class Invoice extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'tenant_id', 'transaction_id', 'created_by', 'number',
+        'tenant_id', 'client_id', 'transaction_id', 'created_by', 'number',
         'client_name', 'client_email', 'client_phone', 'client_address',
         'status', 'issue_date', 'due_date', 'subtotal', 'tax_rate',
         'tax_amount', 'discount', 'total', 'currency', 'notes', 'terms',
@@ -53,6 +53,11 @@ class Invoice extends Model
     public function items()
     {
         return $this->hasMany(InvoiceItem::class)->orderBy('sort_order');
+    }
+
+    public function client()
+    {
+        return $this->belongsTo(Client::class);
     }
 
     public function getPdfUrlAttribute(): ?string

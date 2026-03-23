@@ -13,6 +13,7 @@ class Debt extends Model
     protected $fillable = [
         'tenant_id',
         'account_id',
+        'client_id',
         'name',
         'type',
         'total_amount',
@@ -45,6 +46,11 @@ class Debt extends Model
     public function payments()
     {
         return $this->hasMany(DebtPayment::class);
+    }
+
+    public function client()
+    {
+        return $this->belongsTo(Client::class);
     }
 
     public function scopeForTenant($query, $tenantId)

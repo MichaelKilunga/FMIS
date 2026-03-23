@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
@@ -21,6 +21,21 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
 
+  const [lastBranding, setLastBranding] = useState<{name?: string, logo?: string, primary_color?: string, accent_color?: string} | null>(null)
+
+  useEffect(() => {
+    const stored = localStorage.getItem('fmis_last_branding')
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored)
+        setLastBranding(parsed)
+        // Apply colors to root for background blobs
+        if (parsed.primary_color) document.documentElement.style.setProperty('--color-primary', parsed.primary_color)
+        if (parsed.accent_color) document.documentElement.style.setProperty('--color-accent', parsed.accent_color)
+      } catch (e) {}
+    }
+  }, [])
+
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
   })
@@ -30,7 +45,7 @@ export default function LoginPage() {
     try {
       const res = await authApi.login(data.email, data.password)
       const { token, user } = res.data
-      setAuth(user, token)
+      setAuth(user, token, user.tenant)
 
       // Load settings and apply branding
       try {
@@ -61,11 +76,15 @@ export default function LoginPage() {
       <div className="relative z-10 w-full max-w-md animate-fade-in">
         {/* Logo / Branding */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4"
-               style={{ background: 'linear-gradient(135deg, var(--color-primary), var(--color-accent))' }}>
-            <TrendingUp size={28} className="text-white" />
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4 overflow-hidden"
+               style={{ background: lastBranding?.logo ? 'transparent' : 'linear-gradient(135deg, var(--color-primary), var(--color-accent))' }}>
+            {lastBranding?.logo ? (
+              <img src={lastBranding.logo} alt={lastBranding.name} className="w-full h-full object-contain" />
+            ) : (
+              <TrendingUp size={28} className="text-white" />
+            )}
           </div>
-          <h1 className="text-3xl font-extrabold text-white">FMIS</h1>
+          <h1 className="text-3xl font-extrabold text-white">{lastBranding?.name || 'FMIS'}</h1>
           <p className="text-slate-400 text-sm mt-1">Financial Management & Intelligence System</p>
         </div>
 

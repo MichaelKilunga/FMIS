@@ -54,6 +54,22 @@ class TransactionController extends Controller
         $data['created_by'] = $request->user()->id;
         $data['status']     = Transaction::STATUS_DRAFT;
 
+        // Restriction Check
+        if (!empty($data['account_id'])) {
+            $account = \App\Models\Account::where('id', $data['account_id'])
+                ->where('tenant_id', $data['tenant_id'])
+                ->first();
+            
+            if ($account && !empty($account->allowed_transaction_types)) {
+                if (!in_array($data['type'], $account->allowed_transaction_types)) {
+                    return response()->json([
+                        'message' => "The selected account does not allow '{$data['type']}' transactions.",
+                        'errors' => ['account_id' => ["This account is restricted for " . $data['type']]]
+                    ], 422);
+                }
+            }
+        }
+
         $transaction = $this->transactionService->create($data);
 
         return response()->json($transaction->load(['category', 'account', 'createdBy']), 201);
@@ -86,6 +102,23 @@ class TransactionController extends Controller
         ]);
 
         $before = $transaction->toArray();
+
+        // Restriction Check
+        if (!empty($data['account_id'])) {
+            $account = \App\Models\Account::where('id', $data['account_id'])
+                ->where('tenant_id', $request->user()->tenant_id)
+                ->first();
+            
+            if ($account && !empty($account->allowed_transaction_types)) {
+                if (!in_array($data['type'], $account->allowed_transaction_types)) {
+                    return response()->json([
+                        'message' => "The selected account does not allow '{$data['type']}' transactions.",
+                        'errors' => ['account_id' => ["This account is restricted for " . $data['type']]]
+                    ], 422);
+                }
+            }
+        }
+
         $transaction->update($data);
         $this->audit->logModelChange('transaction_updated', $transaction, $before);
 

@@ -19,13 +19,15 @@ class AccountController extends Controller
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'name'            => 'required|string|max:255',
-            'type'            => 'required|in:bank,cash,mobile_money,credit',
-            'balance'         => 'required|numeric',
-            'currency'        => 'required|string|max:10',
-            'bank_name'       => 'nullable|string|max:255',
-            'account_number'  => 'nullable|string|max:50',
-            'color'           => 'nullable|string|max:20',
+            'name'                      => 'required|string|max:255',
+            'type'                      => 'required|in:bank,cash,mobile_money,credit',
+            'balance'                   => 'required|numeric',
+            'currency'                  => 'required|string|max:10',
+            'bank_name'                 => 'nullable|string|max:255',
+            'account_number'            => 'nullable|string|max:50',
+            'color'                     => 'nullable|string|max:20',
+            'allowed_transaction_types' => 'nullable|array',
+            'allowed_transaction_types.*' => 'string|in:income,expense,transfer',
         ]);
 
         $data['tenant_id'] = $request->user()->tenant_id;
@@ -47,14 +49,16 @@ class AccountController extends Controller
         $account = Account::where('tenant_id', $request->user()->tenant_id)->findOrFail($id);
 
         $data = $request->validate([
-            'name'            => 'sometimes|required|string|max:255',
-            'type'            => 'sometimes|required|in:bank,cash,mobile_money,credit',
-            'balance'         => 'sometimes|required|numeric',
-            'currency'        => 'sometimes|required|string|max:10',
-            'bank_name'       => 'nullable|string|max:255',
-            'account_number'  => 'nullable|string|max:50',
-            'color'           => 'nullable|string|max:20',
-            'is_active'       => 'sometimes|boolean',
+            'name'                      => 'sometimes|required|string|max:255',
+            'type'                      => 'sometimes|required|in:bank,cash,mobile_money,credit',
+            'balance'                   => 'sometimes|required|numeric',
+            'currency'                  => 'sometimes|required|string|max:10',
+            'bank_name'                 => 'nullable|string|max:255',
+            'account_number'            => 'nullable|string|max:50',
+            'color'                     => 'nullable|string|max:20',
+            'is_active'                 => 'sometimes|boolean',
+            'allowed_transaction_types' => 'nullable|array',
+            'allowed_transaction_types.*' => 'string|in:income,expense,transfer',
         ]);
 
         $account->update($data);

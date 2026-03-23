@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { invoicesApi } from '../../services/api'
-import type { Invoice, PaginatedResponse } from '../../types'
+import { invoicesApi, clientsApi } from '../../services/api'
+import type { Invoice, PaginatedResponse, Client } from '../../types'
 import { Plus, Download, Send, FileText, Loader2, Trash2, X, CheckCircle } from 'lucide-react'
 import { format } from 'date-fns'
 import toast from 'react-hot-toast'
@@ -22,6 +22,7 @@ interface InvoiceFormItem {
 }
 
 interface InvoiceFormData {
+  client_id?: number
   client_name: string
   client_email?: string
   client_phone?: string
@@ -40,6 +41,8 @@ export default function InvoicesPage() {
   const { user } = useAuthStore()
   const { settings } = useSettingsStore()
 
+  const [clients, setClients] = useState<Client[]>([])
+  
   const defaultCurrency = (settings['currency.default'] as string) || 'TZS'
   const multiEnabled = settings['currency.multi_enabled'] === 'true'
   const manualRatesStr = (settings['currency.manual_rates'] as string) || '{}'
@@ -62,7 +65,7 @@ export default function InvoicesPage() {
 
   const today = new Date().toISOString().split('T')[0]
 
-  const { register, handleSubmit: handleFormSubmit, reset, control, watch } = useForm<InvoiceFormData>({
+  const { register, handleSubmit: handleFormSubmit, reset, control, watch, setValue } = useForm<InvoiceFormData>({
     defaultValues: {
       currency: defaultCurrency,
       issue_date: today,
@@ -94,11 +97,35 @@ export default function InvoicesPage() {
       const res = await invoicesApi.list({ page })
       setData(res.data)
       setCurrentPage(page)
+
+      // Also load clients for the form
+      const cRes = await clientsApi.list({ per_page: 100 })
+      setClients(cRes.data.data)
     }
-    catch { toast.error('Failed to load invoices') } finally { setLoading(false) }
+    catch { toast.error('Failed to load data') } finally { setLoading(false) }
   }
 
   useEffect(() => { load(1) }, [])
+
+  const onClientSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const cid = Number(e.target.value)
+    if (!cid) {
+      setValue('client_id', undefined)
+      setValue('client_name', '')
+      setValue('client_email', '')
+      setValue('client_phone', '')
+      setValue('client_address', '')
+      return
+    }
+    const client = clients.find(c => c.id === cid)
+    if (client) {
+      setValue('client_id', client.id)
+      setValue('client_name', client.name)
+      setValue('client_email', client.email || '')
+      setValue('client_phone', client.phone || '')
+      setValue('client_address', client.address || '')
+    }
+  }
 
   const downloadPdf = async (id: number, number: string) => {
     try {
@@ -254,6 +281,12 @@ export default function InvoicesPage() {
             <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Client Information</h3>
             <div className="grid grid-cols-2 gap-3">
               <div className="col-span-2">
+                <label className="fmis-label">Select Existing Client (Optional)</label>
+                <select onChange={onClientSelect} className="fmis-select mb-2">
+                  <option value="">-- New Client --</option>
+                  {clients.map(c => <option key={c.id} value={c.id}>{c.name} {c.email ? `(${c.email})` : ''}</option>)}
+                </select>
+                
                 <label className="fmis-label">Client / Company Name <span className="text-red-400">*</span></label>
                 <input {...register('client_name', { required: 'Client name is required' })} className="fmis-input" placeholder="e.g. MR GARSON JAMES" />
               </div>

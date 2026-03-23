@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { debtsApi, accountsApi } from '../services/api'
 import type { Debt, DebtType, DebtStatus } from '../types/debt'
 import type { PaginatedResponse } from '../types'
-import { Plus, Search, Filter, DollarSign, ArrowUpRight, ArrowDownLeft, Calendar, MoreHorizontal, CheckCircle, AlertCircle, Trash2 } from 'lucide-react'
+import { Plus, Search, Filter, DollarSign, ArrowUpRight, ArrowDownLeft, Calendar, MoreHorizontal, CheckCircle, AlertCircle, Trash2, Bell, Users } from 'lucide-react'
 import { format } from 'date-fns'
 import toast from 'react-hot-toast'
 import DataTable from '../components/DataTable'
@@ -57,12 +57,26 @@ export default function DebtsPage() {
     }
   }
 
+  const sendReminder = async (id: number) => {
+    try {
+      await debtsApi.remind(id)
+      toast.success('Reminder sent to client')
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || 'Failed to send reminder')
+    }
+  }
+
   const columns = [
     {
-      header: 'Name',
+      header: 'Name / Client',
       accessor: (debt: Debt) => (
         <div>
           <span className="font-medium text-slate-200">{debt.name}</span>
+          {(debt as any).client && (
+            <p className="text-[10px] text-blue-400 font-medium flex items-center gap-1 mt-0.5">
+              <Users size={10} /> {(debt as any).client.name}
+            </p>
+          )}
           <p className="text-xs text-slate-500 truncate max-w-[200px]">{debt.description || 'No description'}</p>
         </div>
       )
@@ -114,6 +128,15 @@ export default function DebtsPage() {
       header: 'Actions',
       accessor: (debt: Debt) => (
         <div className="flex gap-2">
+          {debt.type === 'receivable' && debt.status !== 'paid' && (debt as any).client_id && (
+            <button 
+              onClick={() => sendReminder(debt.id)}
+              className="p-1.5 rounded text-blue-400 hover:bg-blue-900/20 transition-colors"
+              title="Send Reminder"
+            >
+              <Bell size={16} />
+            </button>
+          )}
           {debt.status !== 'paid' && user?.permissions.includes('manage-debts') && (
             <button 
               onClick={() => { setSelectedDebt(debt); setShowPayModal(true) }}

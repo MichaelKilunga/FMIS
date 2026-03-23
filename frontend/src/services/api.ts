@@ -10,6 +10,8 @@ const api = axios.create({
   },
 })
 
+import { enqueueOfflineAction } from './db'
+
 // Attach token on every request
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('fmis_token')
@@ -17,14 +19,51 @@ api.interceptors.request.use((config) => {
   return config
 })
 
-// Handle 401 globally
+// Handle 401 and Offline state globally
 api.interceptors.response.use(
   (res) => res,
-  (error) => {
-    if (error.response?.status === 401) {
+  async (error) => {
+    const { config, response } = error
+
+    // Handle 401 Unauthorized
+    if (response?.status === 401) {
       localStorage.removeItem('fmis_token')
       window.location.href = '/login'
     }
+
+    // Handle Offline Mutations (POST, PUT, DELETE)
+    // Avoid queueing auth requests or GET requests
+    const isMutation = config && ['post', 'put', 'delete'].includes(config.method?.toLowerCase() || '')
+    const isAuthRequest = config?.url?.includes('/auth/')
+    const isOffline = !window.navigator.onLine || error.code === 'ERR_NETWORK' || !response
+
+    if (isMutation && !isAuthRequest && isOffline) {
+      console.warn('Network error detected. Queueing request for offline sync:', config.url)
+      
+      const urlParts = config.url?.split('/') || []
+      const entityType = urlParts[urlParts.length - 1] || 'unknown'
+      const entityId = urlParts.length > 1 && !isNaN(Number(urlParts[urlParts.length - 1])) 
+        ? urlParts[urlParts.length - 1] 
+        : 'new'
+
+      const action = config.method?.toLowerCase() === 'post' ? 'created' 
+                   : config.method?.toLowerCase() === 'put' ? 'updated' 
+                   : 'deleted'
+
+      try {
+        await enqueueOfflineAction(
+          entityType,
+          entityId,
+          action as any,
+          config.data ? JSON.parse(config.data) : {}
+        )
+        // Return a mock success response so the UI doesn't break
+        return { data: { message: 'Action queued for offline sync' }, status: 202 }
+      } catch (dbError) {
+        console.error('Failed to queue offline action:', dbError)
+      }
+    }
+
     return Promise.reject(error)
   }
 )
@@ -177,6 +216,15 @@ export const debtsApi = {
   update: (id: number, data: Record<string, unknown>) => api.put(`/debts/${id}`, data),
   delete: (id: number) => api.delete(`/debts/${id}`),
   recordPayment: (id: number, data: Record<string, unknown>) => api.post(`/debts/${id}/pay`, data),
+  remind: (id: number) => api.post(`/debts/${id}/remind`),
+}
+
+export const clientsApi = {
+  list: (params?: Record<string, unknown>) => api.get('/clients', { params }),
+  get: (id: number) => api.get(`/clients/${id}`),
+  create: (data: Record<string, unknown>) => api.post('/clients', data),
+  update: (id: number, data: Record<string, unknown>) => api.put(`/clients/${id}`, data),
+  delete: (id: number) => api.delete(`/clients/${id}`),
 }
 
 export const billsApi = {

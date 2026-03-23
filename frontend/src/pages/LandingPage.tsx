@@ -3,13 +3,15 @@ import { useNavigate, Link } from 'react-router-dom'
 import { 
   TrendingUp, Shield, Zap, BarChart3, Users, 
   ArrowRight, CheckCircle2, Globe, Clock, 
-  ChevronRight, LayoutDashboard, CreditCard, ListTodo
+  ChevronRight, LayoutDashboard, CreditCard, ListTodo,
+  Menu, X
 } from 'lucide-react'
 import { settingsApi } from '../services/api'
 
 export default function LandingPage() {
   const navigate = useNavigate()
   const [supportEmail, setSupportEmail] = useState('support@skylinksolutions.co')
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   useEffect(() => {
     settingsApi.getSystemSettings()
@@ -73,6 +75,7 @@ export default function LandingPage() {
               <span className="text-2xl font-black text-white tracking-tight">FMIS</span>
             </div>
             
+            {/* Desktop Navigation */}
             <div className="hidden md:flex items-center gap-8 text-sm font-medium">
               <a href="#features" className="hover:text-blue-400 transition-colors">Features</a>
               <a href="#about" className="hover:text-blue-400 transition-colors">About</a>
@@ -83,8 +86,51 @@ export default function LandingPage() {
                 Register
               </button>
             </div>
+
+            {/* Mobile Menu Button */}
+            <button 
+              className="md:hidden p-2 text-slate-400 hover:text-white transition-colors"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            >
+              {mobileMenuOpen ? <X size={28} /> : <Menu size={28} />}
+            </button>
           </div>
         </div>
+
+        {/* Mobile Navigation Menu */}
+        {mobileMenuOpen && (
+          <div className="md:hidden border-t border-slate-800 bg-slate-950/95 backdrop-blur-xl animate-fade-in">
+            <div className="px-4 py-6 space-y-4">
+              <a 
+                href="#features" 
+                className="block text-lg font-medium text-slate-300 hover:text-white"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Features
+              </a>
+              <a 
+                href="#about" 
+                className="block text-lg font-medium text-slate-300 hover:text-white"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                About
+              </a>
+              <div className="h-px bg-slate-800 my-4" />
+              <button 
+                onClick={() => { navigate('/login'); setMobileMenuOpen(false); }}
+                className="block w-full text-left text-lg font-medium text-slate-300 hover:text-white"
+              >
+                Sign In
+              </button>
+              <button 
+                onClick={() => { navigate('/register'); setMobileMenuOpen(false); }}
+                className="w-full mt-4 bg-blue-600 text-white px-6 py-4 rounded-2xl font-bold hover:bg-blue-500 transition-all active:scale-95"
+              >
+                Register Now
+              </button>
+            </div>
+          </div>
+        )}
       </nav>
 
       {/* Hero Section */}

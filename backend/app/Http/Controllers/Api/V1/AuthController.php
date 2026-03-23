@@ -88,6 +88,7 @@ class AuthController extends Controller
             'avatar_url' => $user->avatar_url,
             'is_active'  => $user->is_active,
             'tenant_id'  => $user->tenant_id,
+            'tenant'     => $user->tenant ? $user->tenant->branding : null,
             'roles'      => $user->roles->pluck('name'),
             'permissions'=> $user->getAllPermissions()->pluck('name'),
         ];

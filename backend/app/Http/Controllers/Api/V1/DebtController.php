@@ -39,6 +39,7 @@ class DebtController extends Controller
             'issue_date'       => 'required|date',
             'due_date'         => 'nullable|date|after_or_equal:issue_date',
             'account_id'       => 'nullable|exists:accounts,id',
+            'client_id'        => 'nullable|exists:clients,id',
             'description'      => 'nullable|string',
         ]);
 
@@ -72,6 +73,7 @@ class DebtController extends Controller
             'issue_date'    => 'sometimes|date',
             'due_date'      => 'nullable|date',
             'status'        => 'sometimes|in:active,paid,overdue,defaulted',
+            'client_id'     => 'nullable|exists:clients,id',
             'description'   => 'nullable|string',
         ]);
 
@@ -102,6 +104,31 @@ class DebtController extends Controller
             'payment' => $payment->load('transaction'),
             'debt'    => $debt->fresh(),
         ]);
+    }
+
+    public function remind(Request $request, Debt $debt): JsonResponse
+    {
+        abort_if($debt->tenant_id !== $request->user()->tenant_id, 403);
+        
+        $clientEmail = $debt->client?->email;
+        if (!$clientEmail) {
+            return response()->json(['message' => 'Client has no email address configured.'], 422);
+        }
+
+        $notificationService = app(\App\Services\NotificationService::class);
+        $notificationService->notifyClient(
+            $clientEmail,
+            "Debt Reminder: {$debt->name}",
+            "This is a reminder regarding your outstanding balance of " . number_format($debt->remaining_amount, 2) . ". Please settle your due payments.",
+            $debt->tenant_id,
+            ['url' => config('app.frontend_url') . "/debts/{$debt->id}", 'label' => 'View Details'],
+            'warning',
+            ['debt_id' => $debt->id]
+        );
+
+        $this->audit->log('debt_reminder_sent', $debt);
+
+        return response()->json(['message' => 'Reminder sent successfully.']);
     }
 
     public function destroy(Request $request, Debt $debt): JsonResponse

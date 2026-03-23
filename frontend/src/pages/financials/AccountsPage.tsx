@@ -31,6 +31,7 @@ interface AccountFormData {
   account_number?: string
   color?: string
   is_active: boolean
+  allowed_transaction_types: ('income' | 'expense' | 'transfer')[]
 }
 
 export default function AccountsPage() {
@@ -45,7 +46,8 @@ export default function AccountsPage() {
       type: 'bank',
       currency: 'TZS',
       is_active: true,
-      balance: 0
+      balance: 0,
+      allowed_transaction_types: ['income', 'expense', 'transfer']
     }
   })
 
@@ -76,6 +78,7 @@ export default function AccountsPage() {
     setValue('account_number', (account as any).account_number || '')
     setValue('color', account.color || '')
     setValue('is_active', account.is_active)
+    setValue('allowed_transaction_types', account.allowed_transaction_types || ['income', 'expense', 'transfer'])
     setShowModal(true)
   }
 
@@ -85,7 +88,8 @@ export default function AccountsPage() {
       type: 'bank',
       currency: 'TZS',
       is_active: true,
-      balance: 0
+      balance: 0,
+      allowed_transaction_types: ['income', 'expense', 'transfer']
     })
     setShowModal(true)
   }
@@ -137,6 +141,27 @@ export default function AccountsPage() {
           </div>
         )
       }
+    },
+    {
+      header: 'Usage Restrictions',
+      accessor: (acc: Account) => (
+        <div className="flex flex-wrap gap-1">
+          {(!acc.allowed_transaction_types || acc.allowed_transaction_types.length === 0 || acc.allowed_transaction_types.length === 3) ? (
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700 uppercase">Unrestricted</span>
+          ) : (
+            acc.allowed_transaction_types.map(t => (
+              <span key={t} className={clsx(
+                "text-[10px] px-1.5 py-0.5 rounded border uppercase",
+                t === 'income' ? "bg-emerald-900/30 text-emerald-400 border-emerald-800/50" :
+                t === 'expense' ? "bg-rose-900/30 text-rose-400 border-rose-800/50" :
+                "bg-blue-900/30 text-blue-400 border-blue-800/50"
+              )}>
+                {t}
+              </span>
+            ))
+          )}
+        </div>
+      )
     },
     {
       header: 'Bank/Provider',
@@ -243,6 +268,24 @@ export default function AccountsPage() {
 
             <div className="sm:col-span-2 pt-2 border-t border-slate-700/50 mt-2">
               <p className="text-xs font-semibold text-slate-500 uppercase mb-3">Optional Details</p>
+            </div>
+
+            <div className="sm:col-span-2 space-y-2">
+              <label className="fmis-label">Allowed Usage (Restrictions)</label>
+              <div className="grid grid-cols-3 gap-2">
+                {['income', 'expense', 'transfer'].map(type => (
+                  <label key={type} className="flex items-center gap-2 p-2 rounded-lg bg-slate-800/50 border border-slate-700/50 cursor-pointer hover:bg-slate-800 transition-colors">
+                    <input
+                      type="checkbox"
+                      value={type}
+                      {...register('allowed_transaction_types')}
+                      className="rounded border-slate-600 bg-slate-700 text-blue-500 focus:ring-blue-500 focus:ring-offset-slate-800"
+                    />
+                    <span className="text-xs font-medium text-slate-300 uppercase">{type}</span>
+                  </label>
+                ))}
+              </div>
+              <p className="text-[10px] text-slate-500 italic">Uncheck types to restrict this account from being used for those purposes.</p>
             </div>
 
             <div>

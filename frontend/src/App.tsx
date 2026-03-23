@@ -4,8 +4,7 @@ import { Toaster } from 'react-hot-toast'
 
 import { useAuthStore, useOnlineStore, useSettingsStore, applyBranding } from './store'
 import { authApi, settingsApi } from './services/api'
-import { getPendingChanges, markAsSynced } from './services/db'
-import { syncApi } from './services/api'
+import { setupNetworkListeners, syncOfflineRequests } from './services/syncService'
 
 import Layout from './components/layout/Layout'
 import LoginPage from './pages/auth/LoginPage'
@@ -28,6 +27,7 @@ import AccountsPage from './pages/financials/AccountsPage'
 import CategoriesPage from './pages/financials/CategoriesPage'
 import AnalyticsPage from './pages/dashboard/AnalyticsPage'
 import TasksPage from './pages/tasks/TasksPage'
+import ClientsPage from './pages/clients/ClientsPage'
 import LandingPage from './pages/LandingPage'
 import RegisterPage from './pages/auth/RegisterPage'
 import PrivacyPage from './pages/public/PrivacyPage'
@@ -45,18 +45,13 @@ export default function App() {
 
   // Sync online/offline status
   useEffect(() => {
-    const handleOnline = async () => {
-      setOnline(true)
-      await processSyncQueue()
+    setupNetworkListeners()
+    
+    // Initial sync check on mount if online
+    if (navigator.onLine) {
+      syncOfflineRequests()
     }
-    const handleOffline = () => setOnline(false)
-    window.addEventListener('online', handleOnline)
-    window.addEventListener('offline', handleOffline)
-    return () => {
-      window.removeEventListener('online', handleOnline)
-      window.removeEventListener('offline', handleOffline)
-    }
-  }, [setOnline])
+  }, [])
 
   // Restore session and load settings on mount
   useEffect(() => {
@@ -74,17 +69,6 @@ export default function App() {
     }
   }, [isAuthenticated, tenant])
 
-  async function processSyncQueue(): Promise<void> {
-    const pending = await getPendingChanges()
-    if (pending.length === 0) return
-    setPendingCount(pending.length)
-    try {
-      await syncApi.pushChanges(pending)
-      const ids = pending.map(p => p.id!).filter(Boolean)
-      await markAsSynced(ids)
-      setPendingCount(0)
-    } catch { /* will retry next online event */ }
-  }
 
   return (
     <BrowserRouter>
@@ -104,6 +88,7 @@ export default function App() {
           <Route path="transactions" element={<TransactionsPage />} />
           <Route path="approvals"    element={<ApprovalsPage />} />
           <Route path="invoices"     element={<InvoicesPage />} />
+          <Route path="clients"      element={<ClientsPage />} />
           <Route path="budgets"      element={<BudgetsPage />} />
           <Route path="reports"      element={<ReportsPage />} />
           <Route path="settings"     element={<SettingsPage />} />

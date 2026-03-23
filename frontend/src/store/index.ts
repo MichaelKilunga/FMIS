@@ -77,12 +77,48 @@ export const useOnlineStore = create<OnlineState>((set) => ({
 // --- Theme / Branding ---
 export function applyBranding(tenant: Partial<Tenant>): void {
   const root = document.documentElement
-  if (tenant.primary_color)   root.style.setProperty('--color-primary', tenant.primary_color)
+  if (tenant.primary_color) {
+    root.style.setProperty('--color-primary', tenant.primary_color)
+    // Update PWA theme color meta tag
+    let themeMeta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')
+    if (!themeMeta) {
+      themeMeta = document.createElement('meta')
+      themeMeta.name = 'theme-color'
+      document.head.appendChild(themeMeta)
+    }
+    themeMeta.content = tenant.primary_color
+  }
+
   if (tenant.secondary_color) root.style.setProperty('--color-secondary', tenant.secondary_color)
   if (tenant.accent_color)    root.style.setProperty('--color-accent', tenant.accent_color)
+  
+  if (tenant.logo) {
+    // Update apple-touch-icon for PWA
+    let appleIcon = document.querySelector<HTMLLinkElement>('link[rel="apple-touch-icon"]')
+    if (!appleIcon) {
+      appleIcon = document.createElement('link')
+      appleIcon.rel = 'apple-touch-icon'
+      document.head.appendChild(appleIcon)
+    }
+    appleIcon.href = tenant.logo
+  }
+
   if (tenant.favicon) {
     const favicon = document.querySelector<HTMLLinkElement>('link[rel="icon"]')
     if (favicon) favicon.href = tenant.favicon
   }
-  if (tenant.name) document.title = `${tenant.name} | FMIS`
+  
+  if (tenant.name) {
+    document.title = `${tenant.name} | FMIS`
+  }
+
+  // Persist for login page use
+  if (tenant.name || tenant.logo || tenant.primary_color) {
+    localStorage.setItem('fmis_last_branding', JSON.stringify({
+      name: tenant.name,
+      logo: tenant.logo,
+      primary_color: tenant.primary_color,
+      accent_color: tenant.accent_color
+    }))
+  }
 }

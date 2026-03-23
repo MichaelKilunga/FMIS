@@ -16,7 +16,7 @@ const modules = [
 
 export default function SettingsPage() {
   const { settings, setSettings, isModuleEnabled } = useSettingsStore()
-  const { user } = useAuthStore()
+  const { user, tenant, setTenant } = useAuthStore()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [savingCurrency, setSavingCurrency] = useState(false)
@@ -28,9 +28,9 @@ export default function SettingsPage() {
     return <SystemSettingsPage />
   }
 
-  const [primaryColor, setPrimaryColor] = useState('#3B82F6')
-  const [secondaryColor, setSecondaryColor] = useState('#0F172A')
-  const [accentColor, setAccentColor] = useState('#10B981')
+  const [primaryColor, setPrimaryColor] = useState(tenant?.primary_color || '#3B82F6')
+  const [secondaryColor, setSecondaryColor] = useState(tenant?.secondary_color || '#0F172A')
+  const [accentColor, setAccentColor] = useState(tenant?.accent_color || '#10B981')
 
   const [currencyDefault, setCurrencyDefault] = useState('USD')
   const [currencySymbol, setCurrencySymbol] = useState('$')
@@ -51,7 +51,14 @@ export default function SettingsPage() {
       if (res.data['currency.api_provider']) setApiProvider(res.data['currency.api_provider'])
       if (res.data['currency.api_key']) setApiKey(res.data['currency.api_key'])
     }).catch(() => {}).finally(() => setLoading(false))
-  }, [setSettings])
+
+    // Sync local state if tenant changes (e.g. from other tabs or persistence)
+    if (tenant) {
+      setPrimaryColor(tenant.primary_color)
+      setSecondaryColor(tenant.secondary_color)
+      setAccentColor(tenant.accent_color)
+    }
+  }, [setSettings, tenant])
 
   const toggleModule = async (key: string, enabled: boolean) => {
     try {
@@ -70,10 +77,16 @@ export default function SettingsPage() {
       formData.append('secondary_color', secondaryColor)
       formData.append('accent_color', accentColor)
       if (logoFile) formData.append('logo', logoFile)
-      await settingsApi.updateBranding(formData)
-      document.documentElement.style.setProperty('--color-primary', primaryColor)
-      document.documentElement.style.setProperty('--color-secondary', secondaryColor)
-      document.documentElement.style.setProperty('--color-accent', accentColor)
+      const res = await settingsApi.updateBranding(formData)
+      
+      // Update store with new branding
+      if (tenant) {
+        setTenant({
+          ...tenant,
+          ...res.data.branding
+        })
+      }
+      
       toast.success('Branding updated!')
     } catch { toast.error('Failed to save branding') } finally { setSaving(false) }
   }
@@ -221,12 +234,23 @@ export default function SettingsPage() {
           <div className="space-y-4">
             <div>
               <label className="fmis-label">Company Logo</label>
-              <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-600 rounded-lg cursor-pointer hover:border-blue-500 transition-colors bg-slate-800/30">
-                <Upload size={24} className="text-slate-500 mb-2" />
-                <span className="text-sm text-slate-400">{logoFile ? logoFile.name : 'Click to upload logo'}</span>
-                <span className="text-xs text-slate-500">PNG, JPG, SVG · Max 4MB</span>
-                <input type="file" accept="image/*" className="hidden" onChange={e => setLogoFile(e.target.files?.[0] || null)} />
-              </label>
+              <div className="flex gap-4 items-end">
+                <label className="flex flex-col items-center justify-center flex-1 h-32 border-2 border-dashed border-slate-600 rounded-lg cursor-pointer hover:border-blue-500 transition-colors bg-slate-800/30">
+                  <Upload size={24} className="text-slate-500 mb-2" />
+                  <span className="text-sm text-slate-400 text-center px-2">{logoFile ? logoFile.name : 'Click to upload logo'}</span>
+                  <span className="text-xs text-slate-500">PNG, JPG, SVG · Max 4MB</span>
+                  <input type="file" accept="image/*" className="hidden" onChange={e => setLogoFile(e.target.files?.[0] || null)} />
+                </label>
+                {(logoFile || tenant?.logo) && (
+                  <div className="h-32 w-32 rounded-lg border border-slate-700 bg-slate-800 flex items-center justify-center overflow-hidden shrink-0 p-2">
+                    <img 
+                      src={logoFile ? URL.createObjectURL(logoFile) : tenant?.logo} 
+                      alt="Logo Preview" 
+                      className="max-h-full max-w-full object-contain" 
+                    />
+                  </div>
+                )}
+              </div>
             </div>
             <div className="rounded-lg overflow-hidden border border-slate-700">
               <div className="h-8 flex" style={{ background: `linear-gradient(135deg, ${primaryColor}, ${accentColor})` }} />

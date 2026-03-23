@@ -83,4 +83,29 @@ class NotificationService
         // SMS or other channels can be added similarly
         return $channels;
     }
+
+    /**
+     * Send a notification directly to an email (e.g. for a Client).
+     */
+    public function notifyClient(
+        string $email,
+        string $title,
+        string $content,
+        ?int $tenantId = null,
+        array $action = [],
+        string $type = 'info',
+        array $metadata = []
+    ): void {
+        // Respect system/tenant email settings
+        $channels = $this->determineChannels($tenantId);
+        
+        if (!in_array('mail', $channels)) {
+            return;
+        }
+
+        $notification = new StandardNotification($title, $content, $action, $type, $metadata);
+        
+        // We use the anonymous notifiable since clients might not have a User record
+        \Illuminate\Support\Facades\Notification::route('mail', $email)->notify($notification);
+    }
 }

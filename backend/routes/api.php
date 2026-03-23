@@ -149,6 +149,9 @@ Route::prefix('v1')->group(function () {
         Route::delete('debts/{debt}', [DebtController::class, 'destroy'])->middleware('can:manage-debts');
         Route::post('debts/{debt}/pay', [DebtController::class, 'recordPayment'])->middleware('can:manage-debts');
 
+        // Clients
+        Route::apiResource('clients', \App\Http\Controllers\Api\V1\ClientController::class)->middleware('can:manage-invoices');
+
         // Recurring Bills
         Route::apiResource('recurring-bills', RecurringBillController::class);
         Route::post('recurring-bills/{recurring_bill}/pause', [RecurringBillController::class, 'pause']);
