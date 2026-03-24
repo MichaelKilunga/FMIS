@@ -11,6 +11,15 @@ export default function AttendanceWidget() {
 
   const [timeInZone, setTimeInZone] = useState<number>(0)
 
+  const safeTimeFormat = (isoString: string | null) => {
+    if (!isoString) return '--:--'
+    try {
+      const d = new Date(isoString)
+      if (isNaN(d.getTime())) return '--:--'
+      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    } catch { return '--:--' }
+  }
+
   useEffect(() => {
     if (attendance?.time_in_zone_minutes) {
       setTimeInZone(attendance.time_in_zone_minutes)
@@ -150,12 +159,12 @@ export default function AttendanceWidget() {
             <div className="flex items-center gap-4 mb-3">
               <div className="text-left leading-tight">
                 <span className="text-[10px] text-slate-500 uppercase font-black block">Clock In</span>
-                <span className="text-sm font-bold text-slate-200">{new Date(attendance.check_in_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                <span className="text-sm font-bold text-slate-200">{safeTimeFormat(attendance.check_in_time)}</span>
               </div>
               <div className="h-8 w-px bg-slate-700 mx-1"></div>
               <div className="text-left leading-tight">
                 <span className="text-[10px] text-slate-500 uppercase font-black block">Clock Out</span>
-                <span className="text-sm font-bold text-slate-200">{new Date(attendance.check_out_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                <span className="text-sm font-bold text-slate-200">{safeTimeFormat(attendance.check_out_time)}</span>
               </div>
             </div>
             {timeInZone > 0 && (
@@ -170,7 +179,7 @@ export default function AttendanceWidget() {
             <div className="flex items-center justify-between p-4 bg-indigo-950/20 rounded-2xl border border-indigo-500/20 mb-1">
               <div className="flex flex-col">
                 <span className="text-[10px] text-slate-400 uppercase font-bold tracking-tighter">Current Session</span>
-                <span className="text-base font-black text-white">{new Date(attendance.check_in_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                <span className="text-base font-black text-white">{safeTimeFormat(attendance.check_in_time)}</span>
               </div>
               {timeInZone > 0 ? (
                 <div className="text-right">

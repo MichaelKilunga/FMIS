@@ -35,7 +35,7 @@ use App\Http\Controllers\Api\V1\ResetPasswordController;
 |--------------------------------------------------------------------------
 */
 
-Route::prefix('v1')->group(function () {
+Route::group(['prefix' => 'v1'], function () {
 
     // --- Public Auth Routes ---
     Route::prefix('auth')->group(function () {
