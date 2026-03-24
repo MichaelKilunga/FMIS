@@ -23,6 +23,7 @@ use App\Http\Controllers\Api\V1\DebtController;
 use App\Http\Controllers\Api\ElectionController;
 use App\Http\Controllers\Api\V1\RecurringBillController;
 use App\Http\Controllers\Api\V1\TaskController;
+use App\Http\Controllers\Api\V1\ClientController;
 
 use App\Http\Controllers\Api\V1\RegisterController;
 use App\Http\Controllers\Api\V1\SystemAdminController;
@@ -166,7 +167,12 @@ Route::group(['prefix' => 'v1'], function () {
         Route::post('debts/{debt}/pay', [DebtController::class, 'recordPayment'])->middleware('can:manage-debts');
 
         // Clients
-        Route::apiResource('clients', \App\Http\Controllers\Api\V1\ClientController::class)->middleware('can:manage-invoices');
+        Route::get('clients', [ClientController::class, 'index']);
+        Route::post('clients', [ClientController::class, 'store'])->middleware('can:manage-invoices');
+        Route::get('clients/{client}', [ClientController::class, 'show']);
+        Route::put('clients/{client}', [ClientController::class, 'update'])->middleware('can:manage-invoices');
+        Route::patch('clients/{client}', [ClientController::class, 'update'])->middleware('can:manage-invoices');
+        Route::delete('clients/{client}', [ClientController::class, 'destroy'])->middleware('can:manage-invoices');
 
         // Recurring Bills
         Route::apiResource('recurring-bills', RecurringBillController::class);
