@@ -17,7 +17,7 @@ class AttendanceController extends Controller
     {
         $tenantId = $request->user()->tenant_id;
         
-        $query = Attendance::with('user:id,first_name,last_name,email')
+        $query = Attendance::with('user:id,name,email')
             ->where('tenant_id', $tenantId);
 
         // Standard users can only view their own attendance

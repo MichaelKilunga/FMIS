@@ -30,7 +30,7 @@ api.interceptors.response.use(
         const urlParts = sanitizedUrl.split('/').filter(Boolean);
         const endpoint = urlParts[0];
 
-        if (['transactions', 'invoices', 'clients', 'budgets', 'accounts', 'transaction-categories'].includes(endpoint) && urlParts.length === 1) {
+        if (['transactions', 'invoices', 'clients', 'budgets', 'accounts', 'transaction-categories', 'attendances'].includes(endpoint) && urlParts.length === 1) {
           const pending = await getPendingChanges();
           
           if (pending && pending.length > 0) {
@@ -111,7 +111,7 @@ api.interceptors.response.use(
       const urlParts = sanitizedUrl.split('/').filter(Boolean) || [];
       const endpoint = urlParts[0];
 
-      if (['transactions', 'invoices', 'clients', 'budgets', 'accounts', 'transaction-categories'].includes(endpoint) && urlParts.length === 1) {
+      if (['transactions', 'invoices', 'clients', 'budgets', 'accounts', 'transaction-categories', 'attendances'].includes(endpoint) && urlParts.length === 1) {
           try {
             const pending = await getPendingChanges();
             const relevantPending = pending.filter(p => p.entity_type === endpoint && p.action === 'created');
@@ -268,6 +268,13 @@ export const usersApi = {
 
 export const syncApi = {
   pushChanges: (changes: unknown[]) => api.post('/sync/push-changes', { changes }),
+}
+
+export const attendancesApi = {
+  list: (params?: Record<string, unknown>) => api.get('/attendances', { params }),
+  ping: (data: { latitude: number; longitude: number; recorded_at?: string }) => api.post('/attendances/ping', data),
+  checkIn: (data: { latitude: number; longitude: number; notes?: string }) => api.post('/attendances/check-in', data),
+  checkOut: (data: { latitude: number; longitude: number; notes?: string }) => api.post('/attendances/check-out', data),
 }
 
 export const notificationsApi = {

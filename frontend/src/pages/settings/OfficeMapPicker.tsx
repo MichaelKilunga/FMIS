@@ -1,15 +1,11 @@
-import { useState, useEffect, useCallback } from 'react'
-import { GoogleMap, useJsApiLoader, Marker, Circle } from '@react-google-maps/api'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { GoogleMap, useJsApiLoader, Marker, Circle, Autocomplete } from '@react-google-maps/api'
 import { settingsApi } from '../../services/api'
 import { useSettingsStore } from '../../store'
 import toast from 'react-hot-toast'
-import { MapPin, Save, Loader2, Plus, Trash2, Map } from 'lucide-react'
+import { MapPin, Save, Loader2, Plus, Trash2, Map, Search } from 'lucide-react'
 
-const containerStyle = {
-  width: '100%',
-  height: '400px',
-  borderRadius: '0.75rem'
-}
+const libraries: ("places" | "drawing" | "geometry" | "visualization")[] = ["places"]
 
 const defaultCenter = { lat: -6.7924, lng: 39.2083 }
 
@@ -22,24 +18,41 @@ interface OfficeLocation {
 }
 
 // Sub-component for the Google Map to manage the loader stably
-function MapView({ apiKey, mapCenter, handleMapClick, locations, activeLocationId, setActiveLocationId, handleMarkerDragEnd }: {
+function MapView({ apiKey, mapCenter, handleMapClick, locations, activeLocationId, setActiveLocationId, handleMarkerDragEnd, onPlaceSelected }: {
   apiKey: string,
   mapCenter: { lat: number, lng: number },
   handleMapClick: (e: google.maps.MapMouseEvent) => void,
   locations: OfficeLocation[],
   activeLocationId: string | null,
   setActiveLocationId: (id: string | null) => void,
-  handleMarkerDragEnd: (id: string, e: google.maps.MapMouseEvent) => void
+  handleMarkerDragEnd: (id: string, e: google.maps.MapMouseEvent) => void,
+  onPlaceSelected: (lat: number, lng: number) => void
 }) {
+  const [autocomplete, setAutocomplete] = useState<google.maps.places.Autocomplete | null>(null)
+
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: apiKey,
+    libraries
   })
 
   const containerStyle = {
     width: '100%',
     height: '400px',
     borderRadius: '0.75rem'
+  }
+
+  const onLoad = (autocompleteObj: google.maps.places.Autocomplete) => {
+    setAutocomplete(autocompleteObj)
+  }
+
+  const onPlaceChanged = () => {
+    if (autocomplete !== null) {
+      const place = autocomplete.getPlace()
+      if (place.geometry && place.geometry.location) {
+        onPlaceSelected(place.geometry.location.lat(), place.geometry.location.lng())
+      }
+    }
   }
 
   if (loadError) return <div className="p-4 text-center text-red-400">Error loading maps.</div>
@@ -51,45 +64,61 @@ function MapView({ apiKey, mapCenter, handleMapClick, locations, activeLocationI
   )
 
   return (
-    <GoogleMap
-      mapContainerStyle={containerStyle}
-      center={mapCenter}
-      zoom={13}
-      onClick={handleMapClick}
-      options={{
-        streetViewControl: false,
-        mapTypeControl: false,
-        styles: [
-          { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
-          { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
-          { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
-          { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] }
-        ]
-      }}
-    >
-      {locations.map(loc => (
-        <div key={loc.id}>
-          <Marker 
-            position={{ lat: loc.lat, lng: loc.lng }} 
-            draggable 
-            onDragEnd={(e) => handleMarkerDragEnd(loc.id, e)}
-            onClick={() => setActiveLocationId(loc.id)}
-            icon={activeLocationId === loc.id ? 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png' : 'http://maps.google.com/mapfiles/ms/icons/red-dot.png'}
-          />
-          <Circle
-            center={{ lat: loc.lat, lng: loc.lng }}
-            radius={loc.radius}
-            options={{
-              fillColor: activeLocationId === loc.id ? '#3B82F6' : '#EF4444',
-              fillOpacity: 0.2,
-              strokeColor: activeLocationId === loc.id ? '#3B82F6' : '#EF4444',
-              strokeOpacity: 0.8,
-              strokeWeight: activeLocationId === loc.id ? 2 : 1,
-            }}
-          />
-        </div>
-      ))}
-    </GoogleMap>
+    <div className="relative w-full h-full">
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 w-80">
+        <Autocomplete onLoad={onLoad} onPlaceChanged={onPlaceChanged}>
+          <div className="relative group">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-400 transition-colors" size={16} />
+            <input 
+              type="text" 
+              placeholder="Search location..." 
+              className="w-full bg-slate-900/90 backdrop-blur-md border border-slate-700/50 rounded-xl pl-10 pr-4 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 shadow-2xl transition-all"
+            />
+          </div>
+        </Autocomplete>
+      </div>
+      
+      <GoogleMap
+        mapContainerStyle={containerStyle}
+        center={mapCenter}
+        zoom={13}
+        onClick={handleMapClick}
+        options={{
+          streetViewControl: false,
+          mapTypeControl: false,
+          fullscreenControl: false,
+          styles: [
+            { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
+            { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
+            { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
+            { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] }
+          ]
+        }}
+      >
+        {locations.map(loc => (
+          <div key={loc.id}>
+            <Marker 
+              position={{ lat: loc.lat, lng: loc.lng }} 
+              draggable 
+              onDragEnd={(e) => handleMarkerDragEnd(loc.id, e)}
+              onClick={() => setActiveLocationId(loc.id)}
+              icon={activeLocationId === loc.id ? 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png' : 'http://maps.google.com/mapfiles/ms/icons/red-dot.png'}
+            />
+            <Circle
+              center={{ lat: loc.lat, lng: loc.lng }}
+              radius={loc.radius}
+              options={{
+                fillColor: activeLocationId === loc.id ? '#3B82F6' : '#EF4444',
+                fillOpacity: 0.2,
+                strokeColor: activeLocationId === loc.id ? '#3B82F6' : '#EF4444',
+                strokeOpacity: 0.8,
+                strokeWeight: activeLocationId === loc.id ? 2 : 1,
+              }}
+            />
+          </div>
+        ))}
+      </GoogleMap>
+    </div>
   )
 }
 
@@ -199,6 +228,13 @@ export default function OfficeMapPicker() {
     }
   }
 
+  const handlePlaceSelected = (lat: number, lng: number) => {
+    setMapCenter({ lat, lng })
+    if (activeLocationId) {
+      updateLocation(activeLocationId, { lat, lng })
+    }
+  }
+
   if (loadingKey) return <div className="p-4 text-center text-slate-400">Loading map configuration...</div>
   
   if (!apiKey) return (
@@ -237,6 +273,7 @@ export default function OfficeMapPicker() {
             activeLocationId={activeLocationId}
             setActiveLocationId={setActiveLocationId}
             handleMarkerDragEnd={handleMarkerDragEnd}
+            onPlaceSelected={handlePlaceSelected}
           />
         </div>
 

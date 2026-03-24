@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import api from '../services/api'
+import api, { attendancesApi } from '../services/api'
 import { MapPin, LogIn, LogOut, Loader2, CheckCircle2, Clock } from 'lucide-react'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
@@ -30,7 +30,7 @@ export default function AttendanceWidget() {
   const fetchTodayStatus = async () => {
     try {
       const today = new Date().toISOString().split('T')[0]
-      const res = await api.get(`/attendances?date=${today}`)
+      const res = await attendancesApi.list({ date: today })
       if (res.data.data && res.data.data.length > 0) {
         setAttendance(res.data.data[0])
       } else {
@@ -59,13 +59,11 @@ export default function AttendanceWidget() {
         try {
           const lat = position.coords.latitude
           const lng = position.coords.longitude
-          const endpoint = type === 'check-in' ? '/attendances/check-in' : '/attendances/check-out'
+          const params = { latitude: lat, longitude: lng, notes: '' }
           
-          const res = await api.post(endpoint, {
-            latitude: lat,
-            longitude: lng,
-            notes: ''
-          })
+          const res = type === 'check-in' 
+            ? await attendancesApi.checkIn(params) 
+            : await attendancesApi.checkOut(params)
           
           if (res.status === 202) {
             toast('Attendance queued for sync!', { icon: '📶' })

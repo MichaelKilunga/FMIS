@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import api from '../../services/api'
+import api, { attendancesApi } from '../../services/api'
 import { useAuthStore } from '../../store'
 import { Loader2, Calendar, Clock, MapPin, Search } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -18,8 +18,7 @@ interface AttendanceRecord {
   notes: string | null
   user?: {
     id: number
-    first_name: string
-    last_name: string
+    name: string
     email: string
   }
 }
@@ -35,13 +34,10 @@ export default function AttendancePage() {
   const fetchRecords = async () => {
     setLoading(true)
     try {
-      let url = '/attendances'
-      if (dateFilter) {
-        url += `?date=${dateFilter}`
-      }
-      const res = await api.get(url)
+      const res = await attendancesApi.list(dateFilter ? { date: dateFilter } : {})
       setRecords(res.data.data)
-    } catch {
+    } catch (err: any) {
+      console.error('Attendance fetch error:', err.response?.data || err.message)
       toast.error('Failed to load attendance records')
     } finally {
       setLoading(false)
@@ -101,14 +97,14 @@ export default function AttendancePage() {
             <tbody className="divide-y divide-slate-700/50">
               {loading ? (
                 <tr>
-                  <td colSpan={canManageUsers ? 6 : 5} className="p-8 text-center">
+                  <td colSpan={canManageUsers ? 7 : 6} className="p-8 text-center">
                     <Loader2 className="animate-spin text-indigo-500 mx-auto" size={24} />
                     <p className="text-sm text-slate-500 mt-2">Loading records...</p>
                   </td>
                 </tr>
               ) : records.length === 0 ? (
                 <tr>
-                  <td colSpan={canManageUsers ? 6 : 5} className="p-8 text-center text-slate-400">
+                  <td colSpan={canManageUsers ? 7 : 6} className="p-8 text-center text-slate-400">
                     No attendance records found for the selected criteria.
                   </td>
                 </tr>
@@ -127,7 +123,7 @@ export default function AttendancePage() {
                       {canManageUsers && (
                         <td className="p-4">
                           <p className="font-semibold text-slate-200">
-                            {record.user ? `${record.user.first_name} ${record.user.last_name}` : `User ${record.user_id}`}
+                            {record.user ? record.user.name : `User ${record.user_id}`}
                           </p>
                           <p className="text-xs text-slate-500">{record.user?.email}</p>
                         </td>
