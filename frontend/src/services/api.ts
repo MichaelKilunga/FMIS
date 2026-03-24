@@ -151,6 +151,9 @@ export const authApi = {
   logout: () => api.post('/auth/logout'),
   me: () => api.get('/auth/me'),
   updateProfile: (data: FormData) => api.post('/auth/profile', data, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  forgotPassword: (email: string) => api.post('/auth/forgot-password', { email }),
+  resetPassword: (data: Record<string, unknown>) => api.post('/auth/reset-password', data),
+  changePassword: (data: Record<string, unknown>) => api.post('/auth/change-password', data),
 }
 
 export const transactionsApi = {

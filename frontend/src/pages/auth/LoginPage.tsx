@@ -100,7 +100,12 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label className="fmis-label">Password</label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="fmis-label mb-0">Password</label>
+                <button type="button" onClick={() => navigate('/forgot-password')} className="text-sm font-medium text-indigo-400 hover:text-indigo-300">
+                  Forgot password?
+                </button>
+              </div>
               <div className="relative">
                 <input {...register('password')} type={showPassword ? 'text' : 'password'}
                   placeholder="••••••••" className="fmis-input pr-10" autoComplete="current-password" />

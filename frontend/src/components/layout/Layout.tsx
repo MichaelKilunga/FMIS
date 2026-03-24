@@ -56,9 +56,9 @@ export default function Layout() {
   const [profileOpen, setProfileOpen] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
-  const isDirector = user?.roles.includes('director')
-  const isManager  = user?.roles.includes('manager')
-  const isSystemAdmin = user?.permissions.includes('manage-tenants')
+  const isDirector = user?.roles?.includes('director')
+  const isManager  = user?.roles?.includes('manager')
+  const isSystemAdmin = user?.permissions?.includes('manage-tenants')
 
   const handleLogout = async () => {
     try { await authApi.logout() } catch {}
@@ -74,7 +74,7 @@ export default function Layout() {
     // @ts-ignore
     if (item.systemAdminOnly && !isSystemAdmin) return false
     if (item.module && !isModuleEnabled(item.module)) return false
-    if (item.tenantAdminOnly && !user?.roles.includes('tenant-admin')) return false
+    if (item.tenantAdminOnly && !user?.roles?.includes('tenant-admin')) return false
     if (item.adminOnly && !isDirector && !isManager) return false
     return true
   })
@@ -174,6 +174,10 @@ export default function Layout() {
               </button>
               {profileOpen && (
                 <div className="absolute right-0 top-full mt-1 w-48 glass-card py-1 z-[9000] animate-fade-in">
+                  <button onClick={() => { setProfileOpen(false); navigate('/app/profile'); }}
+                    className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-800 transition-colors">
+                    <Settings size={15} /> My Profile
+                  </button>
                   <button onClick={handleLogout}
                     className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-red-400 hover:bg-red-900/20 transition-colors">
                     <LogOut size={15} /> Sign out

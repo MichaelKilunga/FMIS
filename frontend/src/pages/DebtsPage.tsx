@@ -140,7 +140,7 @@ export default function DebtsPage() {
               <Bell size={16} />
             </button>
           )}
-          {debt.status !== 'paid' && user?.permissions.includes('manage-debts') && (
+          {debt.status !== 'paid' && user?.permissions?.includes('manage-debts') && (
             <button 
               onClick={() => { setSelectedDebt(debt); setShowPayModal(true) }}
               className="p-1.5 rounded text-emerald-400 hover:bg-emerald-900/20 transition-colors"
@@ -149,7 +149,7 @@ export default function DebtsPage() {
               <DollarSign size={16} />
             </button>
           )}
-          {user?.permissions.includes('manage-debts') && (
+          {user?.permissions?.includes('manage-debts') && (
             <button 
               onClick={() => { setSelectedDebt(debt); setShowAddModal(true) }}
               className="p-1.5 rounded text-blue-400 hover:bg-blue-900/20 transition-colors"
@@ -158,7 +158,7 @@ export default function DebtsPage() {
               <MoreHorizontal size={16} />
             </button>
           )}
-          {user?.permissions.includes('manage-debts') && (
+          {user?.permissions?.includes('manage-debts') && (
             <button 
               onClick={() => handleDelete(debt.id)}
               className="p-1.5 rounded text-slate-500 hover:text-red-400 hover:bg-red-900/20 transition-colors"
@@ -179,7 +179,7 @@ export default function DebtsPage() {
           <h1 className="text-2xl font-bold text-white">Debts & Receivables</h1>
           <p className="text-slate-400 text-sm">Manage what you owe and what is owed to you</p>
         </div>
-        {user?.permissions.includes('manage-debts') && (
+        {user?.permissions?.includes('manage-debts') && (
           <button onClick={() => { setSelectedDebt(null); setShowAddModal(true) }} className="btn-primary w-fit">
             <Plus size={18} /> New Debt Record
           </button>

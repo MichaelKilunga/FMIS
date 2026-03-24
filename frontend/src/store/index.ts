@@ -9,6 +9,7 @@ interface AuthState {
   tenant: Tenant | null
   isAuthenticated: boolean
   setAuth: (user: User, token: string, tenant?: Tenant) => void
+  setUser: (user: User) => void
   setTenant: (tenant: Tenant) => void
   logout: () => void
 }
@@ -26,6 +27,7 @@ export const useAuthStore = create<AuthState>()(
         // Apply tenant branding as CSS variables
         if (tenant) applyBranding(tenant)
       },
+      setUser: (user) => set({ user }),
       setTenant: (tenant) => {
         set({ tenant })
         applyBranding(tenant)

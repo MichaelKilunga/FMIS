@@ -33,6 +33,9 @@ import RegisterPage from './pages/auth/RegisterPage'
 import PrivacyPage from './pages/public/PrivacyPage'
 import TermsPage from './pages/public/TermsPage'
 import AttendancePage from './pages/attendance/AttendancePage'
+import ForgotPasswordPage from './pages/auth/ForgotPasswordPage'
+import ResetPasswordPage from './pages/auth/ResetPasswordPage'
+import ProfilePage from './pages/profile/ProfilePage'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore()
@@ -106,6 +109,8 @@ export default function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/terms" element={<TermsPage />} />
         
@@ -132,6 +137,7 @@ export default function App() {
           <Route path="analytics"    element={<AnalyticsPage />} />
           <Route path="tasks"        element={<TasksPage />} />
           <Route path="attendance"   element={<AttendancePage />} />
+          <Route path="profile"      element={<ProfilePage />} />
         </Route>
         
         <Route path="*" element={<Navigate to="/" replace />} />

@@ -50,7 +50,7 @@ export default function AnalyticsPage() {
   useEffect(() => {
     const load = async () => {
       try {
-        const isSystemAdmin = user?.permissions.includes('manage-tenants')
+        const isSystemAdmin = user?.permissions?.includes('manage-tenants')
         
         await fetchData()
 
@@ -78,7 +78,7 @@ export default function AnalyticsPage() {
       })
     }
 
-    const isSystemAdmin = user?.permissions.includes('manage-tenants')
+    const isSystemAdmin = user?.permissions?.includes('manage-tenants')
 
     // Fire all requests independently
     analyticsApi.summary(refresh).then(res => { setSummary(res.data); updateLoading('summary', false); }).catch(() => updateLoading('summary', false))

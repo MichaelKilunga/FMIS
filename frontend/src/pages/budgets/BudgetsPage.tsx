@@ -216,7 +216,7 @@ export default function BudgetsPage() {
           <h1 className="text-2xl font-bold text-white">Budgets</h1>
           <p className="text-slate-400 text-sm">Track spending against budgeted amounts</p>
         </div>
-        {user?.roles.includes('tenant-admin') && (
+        {user?.roles?.includes('tenant-admin') && (
           <button onClick={() => setShowForm(true)} className="btn-primary">
             <Plus size={16} /> New Budget
           </button>

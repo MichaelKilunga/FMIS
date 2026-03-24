@@ -59,9 +59,10 @@ class RegisterController extends Controller
                 'is_active' => true,
             ]);
 
-            // 3. Assign Director Role
-            $role = Role::firstOrCreate(['name' => 'director', 'guard_name' => 'web']);
-            $user->assignRole($role);
+            // 3. Assign Director and Tenant Admin Roles
+            $directorRole = Role::firstOrCreate(['name' => 'director', 'guard_name' => 'web']);
+            $adminRole = Role::firstOrCreate(['name' => 'tenant-admin', 'guard_name' => 'web']);
+            $user->assignRole([$directorRole, $adminRole]);
 
             // 4. Initialize Default Categories
             $this->initCategories($tenant->id);
@@ -80,7 +81,7 @@ class RegisterController extends Controller
                     'name'       => $user->name,
                     'email'      => $user->email,
                     'tenant_id'  => $user->tenant_id,
-                    'roles'      => [$role->name],
+                    'roles'      => [$directorRole->name, $adminRole->name],
                 ],
                 'tenant' => $tenant,
             ], 201);
