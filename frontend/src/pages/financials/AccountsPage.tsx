@@ -66,6 +66,14 @@ export default function AccountsPage() {
 
   useEffect(() => {
     loadAccounts()
+
+    const handleSyncComplete = () => {
+      console.log('Sync completed, reloading accounts data...')
+      loadAccounts()
+    }
+
+    window.addEventListener('fmis-sync-completed', handleSyncComplete)
+    return () => window.removeEventListener('fmis-sync-completed', handleSyncComplete)
   }, [])
 
   const handleEdit = (account: Account) => {

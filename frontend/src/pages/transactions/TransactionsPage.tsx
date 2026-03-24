@@ -74,7 +74,17 @@ export default function TransactionsPage() {
     } catch {} finally { setLoading(false) }
   }, [search, statusFilter])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => { 
+    load() 
+
+    const handleSyncComplete = () => {
+      console.log('Sync completed, reloading transactions data...')
+      load()
+    }
+
+    window.addEventListener('fmis-sync-completed', handleSyncComplete)
+    return () => window.removeEventListener('fmis-sync-completed', handleSyncComplete)
+  }, [load])
 
   // Open edit modal and pre-fill form
   const openEdit = (tx: Transaction) => {

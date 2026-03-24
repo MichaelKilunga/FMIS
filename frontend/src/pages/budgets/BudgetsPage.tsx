@@ -57,7 +57,15 @@ export default function BudgetsPage() {
 
   useEffect(() => {
     load(1)
-  }, [])
+
+    const handleSyncComplete = () => {
+      console.log('Sync completed, reloading budgets data...')
+      load(currentPage)
+    }
+
+    window.addEventListener('fmis-sync-completed', handleSyncComplete)
+    return () => window.removeEventListener('fmis-sync-completed', handleSyncComplete)
+  }, [currentPage])
 
   const openEdit = (budget: Budget) => {
     setEditBudget(budget)

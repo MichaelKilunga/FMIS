@@ -12,6 +12,7 @@ import toast from 'react-hot-toast'
 import clsx from 'clsx'
 import NotificationBell from '../notifications/NotificationBell'
 import PwaInstallBanner from './PwaInstallBanner'
+import GlobalLocationTracker from '../GlobalLocationTracker'
 
 interface NavItem {
   to: string
@@ -191,6 +192,7 @@ export default function Layout() {
         </main>
       </div>
       <PwaInstallBanner />
+      <GlobalLocationTracker />
     </div>
   )
 }

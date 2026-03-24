@@ -22,13 +22,13 @@ export async function syncOfflineRequests() {
       
       switch (item.action) {
         case 'created':
-          response = await api.post(`/v1/${item.entity_type}`, payload)
+          response = await api.post(`/${item.entity_type}`, payload)
           break
         case 'updated':
-          response = await api.put(`/v1/${item.entity_type}/${item.entity_id}`, payload)
+          response = await api.put(`/${item.entity_type}/${item.entity_id}`, payload)
           break
         case 'deleted':
-          response = await api.delete(`/v1/${item.entity_type}/${item.entity_id}`)
+          response = await api.delete(`/${item.entity_type}/${item.entity_id}`)
           break
       }
 
@@ -46,6 +46,8 @@ export async function syncOfflineRequests() {
 
   if (successCount > 0) {
     toast.success(`Successfully synced ${successCount} changes`, { id: toastId })
+    // Dispatch an event so components can refresh their data
+    window.dispatchEvent(new CustomEvent('fmis-sync-completed', { detail: { successCount } }))
   } else if (failCount > 0) {
     toast.error(`Failed to sync ${failCount} changes. Will retry later.`, { id: toastId })
   } else {

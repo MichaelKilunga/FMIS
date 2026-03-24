@@ -5,6 +5,7 @@ import { Settings, Save, Loader2, Palette, ToggleLeft, ToggleRight, Upload, Doll
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
 import SystemSettingsPage from './SystemSettingsPage'
+import OfficeMapPicker from './OfficeMapPicker'
 
 const modules = [
   { key: 'modules.analytics.enabled',       label: 'Analytics', desc: 'Dashboard analytics and charts' },
@@ -265,6 +266,8 @@ export default function SettingsPage() {
           {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} Save Branding
         </button>
       </div>
+
+      <OfficeMapPicker />
 
       <div className="glass-card p-6">
         <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">

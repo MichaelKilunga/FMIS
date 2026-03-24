@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\AccountController;
 use App\Http\Controllers\Api\V1\TenantController;
 use App\Http\Controllers\Api\V1\NotificationController;
+use App\Http\Controllers\Api\V1\AttendanceController;
 use App\Http\Controllers\Api\V1\ReportController;
 use App\Http\Controllers\Api\V1\TransactionCategoryController;
 use App\Http\Controllers\Api\V1\DebtController;
@@ -79,6 +80,14 @@ Route::prefix('v1')->group(function () {
         Route::apiResource('transactions', TransactionController::class);
         Route::post('transactions/{transaction}/submit', [TransactionController::class, 'submit']);
         Route::post('transactions/{transaction}/post', [TransactionController::class, 'post']);
+
+        // Attendances
+        Route::prefix('attendances')->group(function () {
+            Route::get('/', [AttendanceController::class, 'index']);
+            Route::post('/ping', [AttendanceController::class, 'ping']);
+            Route::post('/check-in', [AttendanceController::class, 'checkIn']);
+            Route::post('/check-out', [AttendanceController::class, 'checkOut']);
+        });
 
         // Approvals
         Route::get('approvals', [ApprovalController::class, 'index']);

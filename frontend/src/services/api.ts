@@ -9,8 +9,7 @@ const api = axios.create({
     Accept: 'application/json',
   },
 })
-
-import { enqueueOfflineAction } from './db'
+import { enqueueOfflineAction, getPendingChanges } from './db'
 
 // Attach token on every request
 api.interceptors.request.use((config) => {
@@ -20,8 +19,48 @@ api.interceptors.request.use((config) => {
 })
 
 // Handle 401 and Offline state globally
+// Handle 401 and Offline state globally
 api.interceptors.response.use(
-  (res) => res,
+  async (res) => {
+    // Intercept successful GET requests (or cached responses) to merge pending offline creations
+    if (res.config.method?.toLowerCase() === 'get') {
+      try {
+        const cleanUrl = res.config.url?.split('?')[0] || '';
+        const sanitizedUrl = cleanUrl.startsWith('/') ? cleanUrl.substring(1) : cleanUrl;
+        const urlParts = sanitizedUrl.split('/').filter(Boolean);
+        const endpoint = urlParts[0];
+
+        if (['transactions', 'invoices', 'clients', 'budgets', 'accounts', 'transaction-categories'].includes(endpoint) && urlParts.length === 1) {
+          const pending = await getPendingChanges();
+          
+          if (pending && pending.length > 0) {
+            const relevantPending = pending.filter(p => p.entity_type === endpoint && p.action === 'created');
+            
+            if (relevantPending.length > 0) {
+              const newItems = relevantPending.map(p => ({
+                ...(p.payload as any),
+                id: -parseInt(p.id?.toString() || '0'), // Negative ID for offline temp items
+                status: 'draft',
+                isOffline: true,
+                created_at: new Date(p.client_ts || Date.now()).toISOString(),
+                amount: Number((p.payload as any).amount || 0),
+                total: Number((p.payload as any).total || 0),
+              }));
+              
+              if (res.data && Array.isArray(res.data.data)) {
+                res.data.data = [...newItems, ...res.data.data];
+              } else if (res.data && Array.isArray(res.data)) {
+                res.data = [...newItems, ...res.data];
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Error merging offline data:', err);
+      }
+    }
+    return res;
+  },
   async (error) => {
     const { config, response } = error
 
@@ -40,11 +79,12 @@ api.interceptors.response.use(
     if (isMutation && !isAuthRequest && isOffline) {
       console.warn('Network error detected. Queueing request for offline sync:', config.url)
       
-      const urlParts = config.url?.split('/') || []
-      const entityType = urlParts[urlParts.length - 1] || 'unknown'
-      const entityId = urlParts.length > 1 && !isNaN(Number(urlParts[urlParts.length - 1])) 
-        ? urlParts[urlParts.length - 1] 
-        : 'new'
+      const cleanUrl = config.url?.split('?')[0] || '';
+      const sanitizedUrl = cleanUrl.startsWith('/') ? cleanUrl.substring(1) : cleanUrl;
+      const urlParts = sanitizedUrl.split('/').filter(Boolean) || []
+      
+      const entityType = urlParts[0] || 'unknown'
+      const entityId = urlParts.length > 1 ? urlParts[1] : 'new'
 
       const action = config.method?.toLowerCase() === 'post' ? 'created' 
                    : config.method?.toLowerCase() === 'put' ? 'updated' 
@@ -55,12 +95,46 @@ api.interceptors.response.use(
           entityType,
           entityId,
           action as any,
-          config.data ? JSON.parse(config.data) : {}
+          config.data && typeof config.data === 'string' ? JSON.parse(config.data) : (config.data || {})
         )
         // Return a mock success response so the UI doesn't break
         return { data: { message: 'Action queued for offline sync' }, status: 202 }
       } catch (dbError) {
         console.error('Failed to queue offline action:', dbError)
+      }
+    }
+
+    // Attempt to return ONLY offline data if we failed a GET request completely
+    if (config?.method?.toLowerCase() === 'get' && isOffline && !isAuthRequest) {
+      const cleanUrl = config.url?.split('?')[0] || '';
+      const sanitizedUrl = cleanUrl.startsWith('/') ? cleanUrl.substring(1) : cleanUrl;
+      const urlParts = sanitizedUrl.split('/').filter(Boolean) || [];
+      const endpoint = urlParts[0];
+
+      if (['transactions', 'invoices', 'clients', 'budgets', 'accounts', 'transaction-categories'].includes(endpoint) && urlParts.length === 1) {
+          try {
+            const pending = await getPendingChanges();
+            const relevantPending = pending.filter(p => p.entity_type === endpoint && p.action === 'created');
+            
+            const newItems = relevantPending.map(p => ({
+              ...(p.payload as any),
+              id: -parseInt(p.id?.toString() || '0'),
+              status: 'draft',
+              isOffline: true,
+              created_at: new Date(p.client_ts || Date.now()).toISOString(),
+              amount: Number((p.payload as any).amount || 0),
+              total: Number((p.payload as any).total || 0),
+            }));
+            
+            return {
+              data: ['accounts', 'transaction-categories'].includes(endpoint) ? newItems : {
+                data: newItems, current_page: 1, last_page: 1, total: newItems.length, per_page: 15
+              },
+              status: 200,
+              config,
+              headers: {}
+            };
+          } catch(err) { }
       }
     }
 

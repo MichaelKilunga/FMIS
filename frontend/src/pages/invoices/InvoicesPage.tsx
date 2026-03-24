@@ -105,7 +105,17 @@ export default function InvoicesPage() {
     catch { toast.error('Failed to load data') } finally { setLoading(false) }
   }
 
-  useEffect(() => { load(1) }, [])
+  useEffect(() => { 
+    load(1) 
+
+    const handleSyncComplete = () => {
+      console.log('Sync completed, reloading invoices data...')
+      load(currentPage)
+    }
+
+    window.addEventListener('fmis-sync-completed', handleSyncComplete)
+    return () => window.removeEventListener('fmis-sync-completed', handleSyncComplete)
+  }, [currentPage])
 
   const onClientSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const cid = Number(e.target.value)

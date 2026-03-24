@@ -35,7 +35,7 @@ class SettingController extends Controller
 
     public function getSystemSettings(): JsonResponse
     {
-        $keys = ['system.privacy_policy', 'system.terms_of_service', 'system.support_email'];
+        $keys = ['system.privacy_policy', 'system.terms_of_service', 'system.support_email', 'maps.google_api_key'];
         $results = [];
         foreach ($keys as $key) {
             $results[$key] = $this->settings->get($key, null, null);

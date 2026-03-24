@@ -45,8 +45,19 @@ export default function ClientsPage() {
 
   useEffect(() => {
     const timer = setTimeout(() => load(1), 300)
-    return () => clearTimeout(timer)
-  }, [search])
+    
+    const handleSyncComplete = () => {
+      console.log('Sync completed, reloading clients data...')
+      load(currentPage)
+    }
+
+    window.addEventListener('fmis-sync-completed', handleSyncComplete)
+
+    return () => {
+      clearTimeout(timer)
+      window.removeEventListener('fmis-sync-completed', handleSyncComplete)
+    }
+  }, [search, currentPage])
 
   const onSubmit = async (formData: ClientFormData) => {
     setIsSubmitting(true)

@@ -289,15 +289,28 @@ class AnalyticsController extends Controller
                 ->groupBy('priority')
                 ->get();
 
+            $today = now()->toDateString();
+            $expectedStaff = \App\Models\User::forTenant($tenantId)->count();
+            $attendancesToday = \App\Models\Attendance::forTenant($tenantId)->where('date', $today)->get();
+            $presentCount = $attendancesToday->count();
+            $onTimeCount = $attendancesToday->where('status', 'present')->count();
+            
+            $attendanceRate = $expectedStaff > 0 ? round(($presentCount / $expectedStaff) * 100, 2) : 0;
+            $onTimeRate = $presentCount > 0 ? round(($onTimeCount / $presentCount) * 100, 2) : 0;
+
             return [
                 'total'           => $totalTasks,
                 'completed'       => $completedTasks,
                 'overdue'         => $overdueTasks,
-                'completion_rate' => round(($completedTasks / $totalTasks) * 100, 2),
-                'overdue_rate'    => round(($overdueTasks / $totalTasks) * 100, 2),
+                'completion_rate' => round(($completedTasks / max($totalTasks, 1)) * 100, 2),
+                'overdue_rate'    => round(($overdueTasks / max($totalTasks, 1)) * 100, 2),
                 'velocity'        => $velocity,
                 'weighted_impact' => $weightedImpact,
-                'by_priority'     => $byPriority->toArray()
+                'by_priority'     => $byPriority->toArray(),
+                'attendance_rate' => $attendanceRate,
+                'on_time_rate'    => $onTimeRate,
+                'staff_present'   => $presentCount,
+                'staff_expected'  => $expectedStaff
             ];
         });
 

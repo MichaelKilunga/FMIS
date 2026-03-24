@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import clsx from 'clsx'
+import AttendanceWidget from '../../components/AttendanceWidget'
 
 function KpiCard({ label, value, icon: Icon, trend, color, delay = 0 }: { label: string; value: string | number; icon: React.ElementType; trend?: string; color: string; delay?: number }) {
   const bgGlow = color.replace('text-', 'bg-').replace('400', '500/10')
@@ -323,6 +324,7 @@ export default function DashboardPage() {
 
               {/* KPI Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <AttendanceWidget />
                 <KpiCard 
                   label="Total Income"         
                   value={fmt(summary?.totalIncome)}      

@@ -325,18 +325,29 @@ export default function AnalyticsPage() {
                    <Target size={24} />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4 mb-6">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 <div className="p-4 bg-slate-900/50 rounded-2xl border border-slate-800 flex flex-col items-center">
                   <span className="text-2xl font-black text-emerald-400">{loadingStates.productivity ? '--' : productivity?.completion_rate}%</span>
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Completion Rate</span>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1 text-center">Task Completion</span>
                 </div>
                 <div className="p-4 bg-slate-900/50 rounded-2xl border border-slate-800 flex flex-col items-center">
                   <span className="text-2xl font-black text-blue-400">{loadingStates.productivity ? '--' : productivity?.velocity}</span>
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Monthly Tasks</span>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1 text-center">Monthly Tasks</span>
                 </div>
-                <div className="p-4 bg-slate-900/50 rounded-2xl border border-slate-800 flex flex-col items-center col-span-2">
+                <div className="p-4 bg-slate-900/50 rounded-2xl border border-slate-800 flex flex-col items-center">
+                  <span className="text-2xl font-black text-emerald-400">{loadingStates.productivity ? '--' : productivity?.attendance_rate}%</span>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1 text-center">Daily Attendance</span>
+                </div>
+                <div className="p-4 bg-slate-900/50 rounded-2xl border border-slate-800 flex flex-col items-center">
+                  <span className="text-2xl font-black text-amber-400">{loadingStates.productivity ? '--' : productivity?.on_time_rate}%</span>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1 text-center">On-Time Arrival</span>
+                </div>
+                <div className="p-4 bg-slate-900/50 rounded-2xl border border-slate-800 flex flex-col items-center col-span-2 lg:col-span-4 mt-2">
                   <span className="text-3xl font-black text-indigo-400">{loadingStates.productivity ? '--' : productivity?.weighted_impact}</span>
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Total Team Impact (Weighted)</span>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1 text-center">Total Team Impact (Weighted)</span>
+                  {productivity?.staff_expected !== undefined && (
+                    <span className="text-xs text-slate-400 font-medium mt-2">{productivity.staff_present} of {productivity.staff_expected} staff active today</span>
+                  )}
                 </div>
               </div>
               <div className="h-[200px]">

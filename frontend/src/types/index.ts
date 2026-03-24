@@ -244,6 +244,10 @@ export interface ProductivityStats {
   velocity: number
   weighted_impact: number
   by_priority: { priority: string; count: number }[]
+  attendance_rate?: number
+  on_time_rate?: number
+  staff_present?: number
+  staff_expected?: number
 }
 
 export interface ForecastDataPoint {
