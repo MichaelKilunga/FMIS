@@ -57,18 +57,41 @@ class WorkflowController extends Controller
         return response()->json($workflow->load('steps'), 201);
     }
 
-    public function update(Request $request, ApprovalWorkflow $approvalWorkflow): JsonResponse
+    public function show(Request $request, ApprovalWorkflow $workflow): JsonResponse
     {
-        abort_if($approvalWorkflow->tenant_id !== $request->user()->tenant_id, 403);
+        abort_if($workflow->tenant_id !== $request->user()->tenant_id, 403);
+        return response()->json($workflow->load('steps'));
+    }
+
+    public function update(Request $request, ApprovalWorkflow $workflow): JsonResponse
+    {
+        abort_if($workflow->tenant_id !== $request->user()->tenant_id, 403);
+        
         $data = $request->validate([
             'name'       => 'sometimes|string|max:255',
+            'module'     => 'sometimes|in:transaction,invoice,budget',
             'conditions' => 'sometimes|array',
             'is_active'  => 'sometimes|boolean',
+            'steps'      => 'sometimes|array|min:1',
+            'steps.*.step_order'   => 'required_with:steps|integer|min:1',
+            'steps.*.role_name'    => 'required_with:steps|string',
+            'steps.*.threshold_min'=> 'nullable|numeric',
+            'steps.*.threshold_max'=> 'nullable|numeric',
+            'steps.*.require_all'  => 'nullable|boolean',
+            'steps.*.sla_hours'    => 'nullable|integer',
         ]);
 
-        $approvalWorkflow->update($data);
-        $this->audit->logModelChange('workflow_updated', $approvalWorkflow);
-        return response()->json($approvalWorkflow->fresh('steps'));
+        $workflow->update($data);
+
+        if (isset($data['steps'])) {
+            $workflow->steps()->delete();
+            foreach ($data['steps'] as $step) {
+                ApprovalStep::create(['workflow_id' => $workflow->id, ...$step]);
+            }
+        }
+
+        $this->audit->logModelChange('workflow_updated', $workflow);
+        return response()->json($workflow->fresh('steps'));
     }
 
     public function destroy(Request $request, ApprovalWorkflow $approvalWorkflow): JsonResponse

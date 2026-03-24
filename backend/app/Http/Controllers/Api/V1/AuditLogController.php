@@ -11,8 +11,14 @@ class AuditLogController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $tenantId = $request->user()->tenant_id;
-        $query = AuditLog::where('tenant_id', $tenantId)->with('user')->latest();
+        $user = $request->user();
+        $isSystemAdmin = !$user->tenant_id && $user->can('manage-tenants');
+
+        $query = AuditLog::with(['user', 'tenant'])->latest();
+
+        if (!$isSystemAdmin) {
+            $query->where('tenant_id', $user->tenant_id);
+        }
 
         if ($request->filled('action'))     $query->where('action', $request->action);
         if ($request->filled('user_id'))    $query->where('user_id', $request->user_id);
@@ -25,8 +31,14 @@ class AuditLogController extends Controller
 
     public function show(Request $request, AuditLog $auditLog): JsonResponse
     {
-        abort_if($auditLog->tenant_id !== $request->user()->tenant_id, 403);
-        return response()->json($auditLog->load('user'));
+        $user = $request->user();
+        $isSystemAdmin = !$user->tenant_id && $user->can('manage-tenants');
+
+        if (!$isSystemAdmin) {
+            abort_if($auditLog->tenant_id !== $user->tenant_id, 403);
+        }
+
+        return response()->json($auditLog->load(['user', 'tenant']));
     }
     // No store/update/delete — immutable
 }

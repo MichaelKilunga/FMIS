@@ -35,7 +35,9 @@ import TermsPage from './pages/public/TermsPage'
 import AttendancePage from './pages/attendance/AttendancePage'
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage'
 import ResetPasswordPage from './pages/auth/ResetPasswordPage'
+import VerifyEmailPage from './pages/auth/VerifyEmailPage'
 import ProfilePage from './pages/profile/ProfilePage'
+import SystemDashboardPage from './pages/dashboard/SystemDashboardPage'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore()
@@ -85,17 +87,21 @@ export default function App() {
 
   // Restore session and load settings on mount
   useEffect(() => {
+    // Always fetch global settings for branding/content (publicly available keys)
+    settingsApi.getSystemSettings().then(res => {
+        // Merge into settings store or handle specifically
+        setSettings(res.data)
+        // Apply initial branding with these global settings
+        applyBranding(tenant, res.data)
+    }).catch(() => {})
+
     const token = localStorage.getItem('fmis_token')
     if (token) {
-      // If we have a token but aren't "authenticated" in the store (e.g. refresh)
-      // we should load settings and re-apply branding
+      // If we have a token, load all settings (including private ones)
       settingsApi.all().then(res => {
         setSettings(res.data)
+        applyBranding(tenant, res.data)
       }).catch(() => {})
-
-      if (tenant) {
-        applyBranding(tenant)
-      }
     }
   }, [isAuthenticated, tenant])
 
@@ -111,6 +117,7 @@ export default function App() {
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/verify-email/:id/:hash" element={<VerifyEmailPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/terms" element={<TermsPage />} />
         
@@ -138,6 +145,7 @@ export default function App() {
           <Route path="tasks"        element={<TasksPage />} />
           <Route path="attendance"   element={<AttendancePage />} />
           <Route path="profile"      element={<ProfilePage />} />
+          <Route path="system-dashboard" element={<SystemDashboardPage />} />
         </Route>
         
         <Route path="*" element={<Navigate to="/" replace />} />

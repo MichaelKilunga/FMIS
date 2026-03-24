@@ -24,13 +24,15 @@ export const useAuthStore = create<AuthState>()(
       setAuth: (user, token, tenant) => {
         localStorage.setItem('fmis_token', token)
         set({ user, token, tenant, isAuthenticated: true })
-        // Apply tenant branding as CSS variables
-        if (tenant) applyBranding(tenant)
+        // Apply branding with global fallbacks from SettingsStore
+        const globalSettings = useSettingsStore.getState().settings
+        applyBranding(tenant, globalSettings)
       },
       setUser: (user) => set({ user }),
       setTenant: (tenant) => {
         set({ tenant })
-        applyBranding(tenant)
+        const globalSettings = useSettingsStore.getState().settings
+        applyBranding(tenant, globalSettings)
       },
       logout: () => {
         localStorage.removeItem('fmis_token')
@@ -94,24 +96,30 @@ export const usePwaStore = create<PwaState>((set) => ({
 }))
 
 // --- Theme / Branding ---
-export function applyBranding(tenant: Partial<Tenant>): void {
+export function applyBranding(tenant?: Partial<Tenant> | null, systemSettings?: Record<string, any>): void {
   const root = document.documentElement
-  if (tenant.primary_color) {
-    root.style.setProperty('--color-primary', tenant.primary_color)
-    // Update PWA theme color meta tag
-    let themeMeta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')
-    if (!themeMeta) {
-      themeMeta = document.createElement('meta')
-      themeMeta.name = 'theme-color'
-      document.head.appendChild(themeMeta)
-    }
-    themeMeta.content = tenant.primary_color
-  }
-
-  if (tenant.secondary_color) root.style.setProperty('--color-secondary', tenant.secondary_color)
-  if (tenant.accent_color)    root.style.setProperty('--color-accent', tenant.accent_color)
   
-  if (tenant.logo) {
+  const primaryColor = tenant?.primary_color || systemSettings?.['system.primary_color'] || '#3B82F6'
+  const secondaryColor = tenant?.secondary_color || systemSettings?.['system.secondary_color'] || '#0F172A'
+  const accentColor = tenant?.accent_color || systemSettings?.['system.accent_color'] || '#10B981'
+  const logo = tenant?.logo || systemSettings?.['system.logo']
+  const favicon = tenant?.favicon || systemSettings?.['system.favicon']
+  const name = tenant?.name || systemSettings?.['system.name'] || 'FMIS'
+
+  root.style.setProperty('--color-primary', primaryColor)
+  root.style.setProperty('--color-secondary', secondaryColor)
+  root.style.setProperty('--color-accent', accentColor)
+  
+  // Update PWA theme color meta tag
+  let themeMeta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')
+  if (!themeMeta) {
+    themeMeta = document.createElement('meta')
+    themeMeta.name = 'theme-color'
+    document.head.appendChild(themeMeta)
+  }
+  themeMeta.content = primaryColor
+
+  if (logo) {
     // Update apple-touch-icon for PWA
     let appleIcon = document.querySelector<HTMLLinkElement>('link[rel="apple-touch-icon"]')
     if (!appleIcon) {
@@ -119,25 +127,21 @@ export function applyBranding(tenant: Partial<Tenant>): void {
       appleIcon.rel = 'apple-touch-icon'
       document.head.appendChild(appleIcon)
     }
-    appleIcon.href = tenant.logo
+    appleIcon.href = logo
   }
 
-  if (tenant.favicon) {
-    const favicon = document.querySelector<HTMLLinkElement>('link[rel="icon"]')
-    if (favicon) favicon.href = tenant.favicon
+  if (favicon) {
+    const faviconEl = document.querySelector<HTMLLinkElement>('link[rel="icon"]')
+    if (faviconEl) faviconEl.href = favicon
   }
   
-  if (tenant.name) {
-    document.title = `${tenant.name} | FMIS`
-  }
+  document.title = tenant?.name ? `${tenant.name} | ${name}` : name
 
   // Persist for login page use
-  if (tenant.name || tenant.logo || tenant.primary_color) {
-    localStorage.setItem('fmis_last_branding', JSON.stringify({
-      name: tenant.name,
-      logo: tenant.logo,
-      primary_color: tenant.primary_color,
-      accent_color: tenant.accent_color
-    }))
-  }
+  localStorage.setItem('fmis_last_branding', JSON.stringify({
+    name,
+    logo,
+    primary_color: primaryColor,
+    accent_color: accentColor
+  }))
 }

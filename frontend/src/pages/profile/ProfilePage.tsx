@@ -12,10 +12,12 @@ export default function ProfilePage() {
   
   const [profileData, setProfileData] = useState({
     name: user?.name || '',
+    email: user?.email || '',
     phone: user?.phone || '',
     department: user?.department || '',
   })
   const [avatar, setAvatar] = useState<File | null>(null)
+  const [resending, setResending] = useState(false)
   
   const [passwordData, setPasswordData] = useState({
     current_password: '',
@@ -29,18 +31,35 @@ export default function ProfilePage() {
     try {
       const fd = new FormData()
       fd.append('name', profileData.name)
+      fd.append('email', profileData.email)
       if (profileData.phone) fd.append('phone', profileData.phone)
       if (profileData.department) fd.append('department', profileData.department)
       if (avatar) fd.append('avatar', avatar)
 
       const res = await authApi.updateProfile(fd)
       setUser(res.data.user) // Update user without clearing token
-      toast.success('Profile updated successfully')
+      if (res.data.email_changed) {
+        toast.success('Profile updated. Please verify your new email address.')
+      } else {
+        toast.success('Profile updated successfully')
+      }
       setAvatar(null)
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to update profile')
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handleResendVerification = async () => {
+    setResending(true)
+    try {
+      await authApi.resendVerification()
+      toast.success('Verification link sent to your email')
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to resend link')
+    } finally {
+      setResending(false)
     }
   }
 
@@ -66,9 +85,23 @@ export default function ProfilePage() {
 
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-6">
-      <div className="flex flex-col gap-2 relative z-10">
-        <h1 className="text-3xl font-bold text-white tracking-tight drop-shadow-md">My Profile</h1>
-        <p className="text-slate-400">Manage your personal information and security settings</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
+        <div>
+          <h1 className="text-3xl font-bold text-white tracking-tight drop-shadow-md">My Profile</h1>
+          <p className="text-slate-400">Manage your personal information and security settings</p>
+        </div>
+        {!user?.is_verified && (
+          <div className="flex items-center gap-3 bg-amber-500/10 border border-amber-500/20 px-4 py-2 rounded-xl">
+            <span className="text-amber-400 text-sm font-medium">Email not verified</span>
+            <button
+              onClick={handleResendVerification}
+              disabled={resending}
+              className="text-xs bg-amber-500 hover:bg-amber-600 text-black px-3 py-1 rounded-lg font-bold transition-colors disabled:opacity-50"
+            >
+              {resending ? 'Sending...' : 'Resend Link'}
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="flex gap-4 border-b border-slate-700/50 mb-6">
@@ -131,14 +164,17 @@ export default function ProfilePage() {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1">Email <span className="text-slate-500 text-xs">(Read Only)</span></label>
+                    <label className="block text-sm font-medium text-slate-300 mb-1">Email</label>
                     <input
                       type="email"
-                      readOnly
-                      disabled
-                      value={user?.email || ''}
-                      className="w-full px-4 py-2 bg-slate-900/50 border border-slate-700/50 rounded-lg text-slate-500 cursor-not-allowed"
+                      required
+                      value={profileData.email}
+                      onChange={(e) => setProfileData(p => ({ ...p, email: e.target.value }))}
+                      className="w-full px-4 py-2 bg-slate-900/50 border border-slate-700/50 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
                     />
+                    {profileData.email !== user?.email && (
+                      <p className="mt-1 text-[10px] text-amber-500">Changing your email will require re-verification.</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-1">Phone</label>

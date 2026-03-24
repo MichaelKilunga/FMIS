@@ -154,6 +154,8 @@ export const authApi = {
   forgotPassword: (email: string) => api.post('/auth/forgot-password', { email }),
   resetPassword: (data: Record<string, unknown>) => api.post('/auth/reset-password', data),
   changePassword: (data: Record<string, unknown>) => api.post('/auth/change-password', data),
+  resendVerification: () => api.post('/auth/resend-verification'),
+  verifyEmail: (id: string, hash: string) => api.get(`/auth/verify-email/${id}/${hash}`),
 }
 
 export const transactionsApi = {

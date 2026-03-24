@@ -1,7 +1,7 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import {
-  LayoutDashboard, ArrowLeftRight, CheckSquare, FileText, PieChart,
+  LayoutDashboard, ArrowLeftRight, CheckSquare, FileText, PieChart, Clock,
   BarChart3, Settings, Shield, AlertTriangle, Users, GitBranch,
   LogOut, Menu, X, Wifi, WifiOff, Bell, ChevronDown, Building, Gavel, Coins,
   Wallet, Tag
@@ -36,6 +36,7 @@ const navItems: NavItem[] = [
   { to: '/app/accounts',     label: 'Accounts',         icon: Wallet },
   { to: '/app/categories',   label: 'Categories',       icon: Tag },
   { to: '/app/tasks',        label: 'Tasks',            icon: CheckSquare },
+  { to: '/app/attendance',   label: 'Attendance',       icon: Clock },
   { to: '/app/budgets',      label: 'Budgets',          icon: PieChart,   module: 'budgeting' },
   { to: '/app/reports',      label: 'Reports',          icon: BarChart3,  module: 'reporting' },
   { to: '/app/fraud',        label: 'Fraud Detection',  icon: Shield,     module: 'fraud_detection' },
@@ -69,7 +70,8 @@ export default function Layout() {
 
   const visibleNavItems = navItems.filter(item => {
     if (isSystemAdmin) {
-      return ['Dashboard', 'Tenants', 'Users', 'Settings'].includes(item.label)
+      // System admin specific view
+      return ['Dashboard', 'Tenants', 'Users', 'Settings', 'Audit Trail'].includes(item.label)
     }
     // @ts-ignore
     if (item.systemAdminOnly && !isSystemAdmin) return false
@@ -100,15 +102,17 @@ export default function Layout() {
       )}>
         {/* Logo */}
         <div className="flex items-center gap-3 px-4 py-5 border-b border-slate-700/50">
-          {tenant?.logo
-            ? <img src={tenant.logo} alt={tenant.name} className="h-8 w-auto object-contain" />
+          {tenant?.logo || useSettingsStore.getState().settings['system.logo']
+            ? <img src={tenant?.logo || (useSettingsStore.getState().settings['system.logo'] as string)} alt={tenant?.name || (useSettingsStore.getState().settings['system.name'] as string) || 'FMIS'} className="h-8 w-auto object-contain" />
             : <div className="h-8 w-8 rounded-lg flex items-center justify-center text-white font-bold text-sm shadow-lg"
-                   style={{ background: `linear-gradient(135deg, var(--color-primary), var(--color-accent))` }}>F</div>
+                   style={{ background: `linear-gradient(135deg, var(--color-primary), var(--color-accent))` }}>
+                {(tenant?.name || (useSettingsStore.getState().settings['system.name'] as string) || 'F')[0].toUpperCase()}
+              </div>
           }
           {(sidebarOpen || mobileMenuOpen) && (
             <div className="animate-fade-in overflow-hidden">
-              <h1 className="text-white font-bold text-sm truncate">{tenant?.name || 'FMIS'}</h1>
-              <p className="text-slate-400 text-xs capitalize">{tenant?.plan || 'Enterprise'}</p>
+              <h1 className="text-white font-bold text-sm truncate">{isSystemAdmin ? 'System Admin' : (tenant?.name || (useSettingsStore.getState().settings['system.name'] as string) || 'FMIS')}</h1>
+              <p className="text-slate-400 text-xs capitalize">{isSystemAdmin ? 'Global Control' : (tenant?.plan || 'Enterprise')}</p>
             </div>
           )}
         </div>
@@ -116,7 +120,7 @@ export default function Layout() {
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
           {visibleNavItems.map(({ to, label, icon: Icon }) => (
-            <NavLink key={to} to={to} className={({ isActive }) => clsx(
+            <NavLink key={to} to={isSystemAdmin && label === 'Dashboard' ? '/app/system-dashboard' : to} className={({ isActive }) => clsx(
               'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150',
               isActive
                 ? 'sidebar-active text-blue-300'

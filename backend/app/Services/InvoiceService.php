@@ -42,8 +42,8 @@ class InvoiceService
 
     public function generatePdf(Invoice $invoice): string
     {
-        $invoice->load(['items', 'createdBy', 'tenant']);
-        $tenant = Tenant::find($invoice->tenant_id);
+        $invoice->load(['items', 'createdBy', 'tenant.settings']);
+        $tenant = $invoice->tenant;
 
         $pdf = Pdf::loadView('pdf.invoice', [
             'invoice' => $invoice,
@@ -60,8 +60,8 @@ class InvoiceService
 
     public function downloadPdf(Invoice $invoice): \Symfony\Component\HttpFoundation\Response
     {
-        $invoice->load(['items', 'createdBy', 'tenant']);
-        $tenant = Tenant::find($invoice->tenant_id);
+        $invoice->load(['items', 'createdBy', 'tenant.settings']);
+        $tenant = $invoice->tenant;
 
         $pdf = Pdf::loadView('pdf.invoice', [
             'invoice' => $invoice,

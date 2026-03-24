@@ -3,6 +3,7 @@ import { settingsApi } from '../../services/api'
 import { Save, Loader2, Mail, MessageSquare, Bot, MapPin, Database, Shield, LayoutDashboard } from 'lucide-react'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
+import { format } from 'date-fns'
 
 const TABS = [
   { id: 'email', label: 'Email Configuration', icon: Mail },
@@ -11,23 +12,34 @@ const TABS = [
   { id: 'ai', label: 'AI & Intelligence', icon: Bot },
   { id: 'maps', label: 'Maps & Location', icon: MapPin },
   { id: 'security', label: 'Security & Auth', icon: Shield },
-  { id: 'content', label: 'System Content', icon: LayoutDashboard },
+  { id: 'branding', label: 'App Branding', icon: Palette },
+  { id: 'landing', label: 'Landing Page', icon: LayoutDashboard },
+  { id: 'email', label: 'Email Configuration', icon: Mail },
+  { id: 'sms', label: 'Push SMS', icon: MessageSquare },
+  { id: 'whatsapp', label: 'WhatsApp Server', icon: MessageSquare },
+  { id: 'ai', label: 'AI & Intelligence', icon: Bot },
+  { id: 'maps', label: 'Maps & Location', icon: MapPin },
+  { id: 'security', label: 'Security & Auth', icon: Shield },
+  { id: 'content', label: 'Legal Content', icon: FileText },
 ]
+
+import { Palette, FileText, Globe, Upload } from 'lucide-react'
 
 export default function SystemSettingsPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [activeTab, setActiveTab] = useState('email')
+  const [now, setNow] = useState(new Date())
   
   const [formData, setFormData] = useState<Record<string, string>>({})
 
   useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 1000)
     settingsApi.all().then(res => {
-      // The backend returns an object of key => value, we just set it.
-      // E.g. { "email.host": "smtp.example.com", ... }
       setFormData(res.data)
     }).catch(() => toast.error('Failed to load system settings'))
       .finally(() => setLoading(false))
+    return () => clearInterval(timer)
   }, [])
 
   const handleChange = (key: string, value: string) => {
@@ -58,14 +70,32 @@ export default function SystemSettingsPage() {
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto animate-fade-in pl-1">
-      <div>
-        <h1 className="text-3xl font-extrabold text-white flex items-center gap-3">
-          <Database className="text-blue-400" size={28} /> Global System Configurations
-        </h1>
-        <p className="text-slate-400 text-sm mt-2 max-w-2xl leading-relaxed">
-          Manage core environment variables, credentials, and API integrations for all tenants universally. 
-          Use the categories below to configure the integrated system modules.
-        </p>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-extrabold text-white flex items-center gap-3 tracking-tight">
+            <Database className="text-blue-400" size={28} /> Global Control Layer
+          </h1>
+          <p className="text-slate-400 text-sm mt-2 max-w-2xl leading-relaxed">
+            Manage the underlying infrastructure, API integrations, and environment variables that power all {formData['system.total_tenants'] || 'active'} tenants.
+          </p>
+        </div>
+        <div className="bg-slate-800/80 backdrop-blur px-4 py-2 rounded-xl border border-slate-700/50 flex flex-col items-end">
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">System Time (UTC)</span>
+            <span className="text-white font-mono font-bold">{format(now, 'HH:mm:ss')}</span>
+        </div>
+      </div>
+
+      <div className="bg-gradient-to-r from-blue-600/10 to-purple-600/10 border border-blue-500/20 rounded-2xl p-4 flex items-center gap-4">
+          <div className="p-2 bg-blue-500/20 rounded-lg text-blue-400">
+              <Shield size={20} />
+          </div>
+          <div className="flex-1">
+              <p className="text-sm font-bold text-white uppercase tracking-tighter">System-Wide Configuration Mode</p>
+              <p className="text-xs text-slate-400">Changes made here affect all tenant environments immediately. Exercise caution with API keys and database credentials.</p>
+          </div>
+          <div className="hidden sm:block">
+              <span className="px-3 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full text-[10px] font-bold uppercase tracking-wider">Operational</span>
+          </div>
       </div>
 
       <div className="flex flex-col lg:flex-row gap-8 items-start mt-8">
@@ -100,6 +130,112 @@ export default function SystemSettingsPage() {
           <div className="absolute top-0 right-0 w-80 h-80 bg-blue-500/5 blur-[120px] pointer-events-none rounded-full" />
 
           <form onSubmit={handleSave} className="glass-card p-8 rounded-3xl relative z-10 border border-slate-700/60 shadow-xl overflow-hidden">
+            {activeTab === 'branding' && (
+              <div className="animate-slide-in">
+                <div className="mb-6 border-b border-slate-700/60 pb-5">
+                  <h2 className="text-xl font-bold text-white tracking-tight">Application Branding</h2>
+                  <p className="text-sm text-slate-400 mt-1">Logo, favicon and primary colors for the global application interface.</p>
+                </div>
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <Field label="System Name" value={formData['system.name'] || 'FMIS'} onChange={v => handleChange('system.name', v)} placeholder="e.g. My FMIS Enterprise" />
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Primary Color</label>
+                      <div className="flex gap-2">
+                        <input type="color" value={formData['system.primary_color'] || '#3B82F6'} onChange={e => handleChange('system.primary_color', e.target.value)} className="h-11 w-14 bg-slate-900 border border-slate-700 rounded-xl cursor-pointer" />
+                        <input value={formData['system.primary_color'] || '#3B82F6'} onChange={e => handleChange('system.primary_color', e.target.value)} className="flex-1 bg-slate-900/60 border border-slate-700 rounded-xl px-4 py-3 text-slate-200 uppercase font-mono" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-slate-700/30">
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Global Logo</label>
+                      <div className="flex flex-col gap-3">
+                        {formData['system.logo'] && (
+                          <div className="h-20 bg-slate-900/50 rounded-xl border border-slate-700 p-3 flex items-center justify-center">
+                            <img src={formData['system.logo']} alt="System Logo" className="max-h-full max-w-full object-contain" />
+                          </div>
+                        )}
+                        <input type="file" onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          const fd = new FormData();
+                          fd.append('logo', file);
+                          fd.append('is_system_wide', 'true');
+                          try {
+                            setSaving(true);
+                            await settingsApi.updateBranding(fd);
+                            const res = await settingsApi.all();
+                            setFormData(res.data);
+                            toast.success('Logo uploaded');
+                          } catch { toast.error('Upload failed') } finally { setSaving(false) }
+                        }} className="text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-600/10 file:text-blue-400 hover:file:bg-blue-600/20" accept="image/*" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Favicon</label>
+                      <div className="flex flex-col gap-3">
+                        {formData['system.favicon'] && (
+                          <div className="h-20 w-20 bg-slate-900/50 rounded-xl border border-slate-700 p-3 flex items-center justify-center">
+                            <img src={formData['system.favicon']} alt="Favicon" className="max-h-full max-w-full object-contain" />
+                          </div>
+                        )}
+                        <input type="file" onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          const fd = new FormData();
+                          fd.append('favicon', file);
+                          fd.append('is_system_wide', 'true');
+                          try {
+                            setSaving(true);
+                            await settingsApi.updateBranding(fd);
+                            const res = await settingsApi.all();
+                            setFormData(res.data);
+                            toast.success('Favicon uploaded');
+                          } catch { toast.error('Upload failed') } finally { setSaving(false) }
+                        }} className="text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-purple-600/10 file:text-purple-400 hover:file:bg-purple-600/20" accept="image/x-icon,image/png" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'landing' && (
+              <div className="animate-slide-in">
+                <div className="mb-6 border-b border-slate-700/60 pb-5">
+                  <h2 className="text-xl font-bold text-white tracking-tight">Landing Page & SEO</h2>
+                  <p className="text-sm text-slate-400 mt-1">Customize the public landing page hero content and search engine metadata.</p>
+                </div>
+                <div className="space-y-6">
+                  <div className="space-y-4">
+                    <Field label="Hero Title" value={formData['landing.hero_title'] || 'Financial Intelligence For Modern Organizations'} onChange={v => handleChange('landing.hero_title', v)} />
+                    <Field label="Hero Subtitle" value={formData['landing.hero_subtitle'] || 'The all-in-one Financial Management & Intelligence System designed to streamline your operations.'} onChange={v => handleChange('landing.hero_subtitle', v)} />
+                    <Field label="CTA Button Text" value={formData['landing.cta_text'] || 'Get Started Now'} onChange={v => handleChange('landing.cta_text', v)} />
+                  </div>
+
+                  <div className="pt-6 border-t border-slate-700/30 space-y-4">
+                    <h3 className="text-xs font-bold text-blue-400 uppercase tracking-widest flex items-center gap-2">
+                       <Globe size={14} /> Search Engine Optimization (SEO)
+                    </h3>
+                    <Field label="Meta Title" value={formData['system.seo.title'] || 'FMIS - Financial Intelligence Platform'} onChange={v => handleChange('system.seo.title', v)} placeholder="Browser tab title..." />
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Meta Description</label>
+                      <textarea 
+                        value={formData['system.seo.description'] || ''} 
+                        onChange={e => handleChange('system.seo.description', e.target.value)}
+                        rows={3}
+                        placeholder="Short summary for Google results..."
+                        className="w-full bg-slate-900/60 border border-slate-700 rounded-xl px-4 py-3 text-slate-200 text-sm focus:ring-2 focus:ring-blue-500/40 outline-none"
+                      />
+                    </div>
+                    <Field label="Meta Keywords (Comma separated)" value={formData['system.seo.keywords'] || 'fmis, finance, management, intelligence'} onChange={v => handleChange('system.seo.keywords', v)} />
+                  </div>
+                </div>
+              </div>
+            )}
+
             {activeTab === 'email' && (
               <div className="animate-slide-in">
                 <div className="mb-6 border-b border-slate-700/60 pb-5">
@@ -222,7 +358,7 @@ export default function SystemSettingsPage() {
             {activeTab === 'content' && (
               <div className="animate-slide-in">
                 <div className="mb-6 border-b border-slate-700/60 pb-5">
-                  <h2 className="text-xl font-bold text-white tracking-tight">System Public Content</h2>
+                  <h2 className="text-xl font-bold text-white tracking-tight">Legal & Public Content</h2>
                   <p className="text-sm text-slate-400 mt-1">Manage global Privacy Policy, Terms of Service, and support contact details.</p>
                 </div>
                 <div className="space-y-6">

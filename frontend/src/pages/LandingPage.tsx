@@ -4,24 +4,68 @@ import {
   TrendingUp, Shield, Zap, BarChart3, Users, 
   ArrowRight, CheckCircle2, Globe, Clock, 
   ChevronRight, LayoutDashboard, CreditCard, ListTodo,
-  Menu, X
+  Menu, X, Sparkles, Box
 } from 'lucide-react'
 import { settingsApi } from '../services/api'
 
 export default function LandingPage() {
   const navigate = useNavigate()
-  const [supportEmail, setSupportEmail] = useState('support@skylinksolutions.co')
+  const [config, setConfig] = useState<Record<string, string>>({})
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
 
   useEffect(() => {
     settingsApi.getSystemSettings()
       .then(res => {
-        if (res.data['system.support_email']) {
-          setSupportEmail(res.data['system.support_email'])
+        setConfig(res.data)
+        // Update document title for SEO
+        if (res.data['system.seo.title']) {
+          document.title = res.data['system.seo.title']
+        }
+        // Update meta tags for SEO
+        updateMetaTags(res.data)
+        
+        // Apply primary color
+        if (res.data['system.primary_color']) {
+            document.documentElement.style.setProperty('--primary', res.data['system.primary_color'])
         }
       })
       .catch(() => {})
+
+    const handleScroll = () => setScrolled(window.scrollY > 20)
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
   }, [])
+
+  const updateMetaTags = (data: Record<string, string>) => {
+    const head = document.head
+    
+    const setMeta = (name: string, content: string, property: boolean = false) => {
+        let el = property 
+            ? head.querySelector(`meta[property="${name}"]`) 
+            : head.querySelector(`meta[name="${name}"]`)
+        
+        if (!el) {
+            el = document.createElement('meta')
+            if (property) el.setAttribute('property', name)
+            else el.setAttribute('name', name)
+            head.appendChild(el)
+        }
+        el.setAttribute('content', content)
+    }
+
+    if (data['system.seo.description']) setMeta('description', data['system.seo.description'])
+    if (data['system.seo.keywords']) setMeta('keywords', data['system.seo.keywords'])
+    
+    // Open Graph
+    setMeta('og:title', data['system.seo.title'] || data['system.name'] || 'FMIS', true)
+    setMeta('og:description', data['system.seo.description'] || '', true)
+    if (data['system.logo']) setMeta('og:image', data['system.logo'], true)
+  }
+
+  const appName = config['system.name'] || 'FMIS'
+  const logoUrl = config['system.logo'] || null
+  const primaryColor = config['system.primary_color'] || '#3B82F6'
 
   const features = [
     {
@@ -57,33 +101,43 @@ export default function LandingPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-200 selection:bg-blue-500/30">
+    <div className="min-h-screen bg-slate-950 text-slate-200 selection:bg-blue-500/30 font-inter">
       {/* Background Orbs */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-blue-600/10 blur-[120px]" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-emerald-600/10 blur-[120px]" />
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] rounded-full bg-blue-600/10 blur-[150px] animate-pulse-slow" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] rounded-full bg-emerald-600/10 blur-[150px] animate-pulse-slow" style={{ animationDelay: '2s' }} />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 brightness-100 contrast-150" />
       </div>
 
       {/* Navigation */}
-      <nav className="relative z-50 border-b border-slate-800/50 bg-slate-950/50 backdrop-blur-md">
+      <nav className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-300 ${
+        scrolled ? 'py-4 bg-slate-950/80 backdrop-blur-xl border-b border-white/5 shadow-2xl' : 'py-6 bg-transparent'
+      }`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-20">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-emerald-500 flex items-center justify-center">
-                <TrendingUp size={24} className="text-white" />
-              </div>
-              <span className="text-2xl font-black text-white tracking-tight">FMIS</span>
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-3 group cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+              {logoUrl ? (
+                <img src={logoUrl} alt={appName} className="h-10 w-auto object-contain transition-transform group-hover:scale-110" />
+              ) : (
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-emerald-500 flex items-center justify-center shadow-lg shadow-blue-500/20 group-hover:rotate-12 transition-all">
+                  <TrendingUp size={22} className="text-white" />
+                </div>
+              )}
+              <span className="text-2xl font-black text-white tracking-tighter uppercase">{appName}</span>
             </div>
             
             {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center gap-8 text-sm font-medium">
-              <a href="#features" className="hover:text-blue-400 transition-colors">Features</a>
-              <a href="#about" className="hover:text-blue-400 transition-colors">About</a>
+            <div className="hidden md:flex items-center gap-10 text-[13px] font-bold uppercase tracking-widest">
+              <a href="#features" className="text-slate-400 hover:text-white transition-colors">Features</a>
+              <a href="#solutions" className="text-slate-400 hover:text-white transition-colors">Solutions</a>
               <div className="h-4 w-px bg-slate-800" />
-              <button onClick={() => navigate('/login')} className="hover:text-white transition-colors">Sign In</button>
-              <button onClick={() => navigate('/register')} 
-                      className="bg-white text-slate-950 px-5 py-2.5 rounded-full font-bold hover:bg-blue-50 transition-all active:scale-95 shadow-lg shadow-white/5">
-                Register
+              <button onClick={() => navigate('/login')} className="text-slate-400 hover:text-white transition-colors">Sign In</button>
+              <button 
+                onClick={() => navigate('/register')} 
+                className="relative group overflow-hidden bg-white text-slate-950 px-7 py-3 rounded-full font-black transition-all hover:pr-10 active:scale-95 shadow-xl shadow-white/5"
+              >
+                <span className="relative z-10 transition-all">Get Started</span>
+                <ChevronRight size={16} className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all" />
               </button>
             </div>
 
@@ -99,33 +153,13 @@ export default function LandingPage() {
 
         {/* Mobile Navigation Menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-t border-slate-800 bg-slate-950/95 backdrop-blur-xl animate-fade-in">
-            <div className="px-4 py-6 space-y-4">
-              <a 
-                href="#features" 
-                className="block text-lg font-medium text-slate-300 hover:text-white"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Features
-              </a>
-              <a 
-                href="#about" 
-                className="block text-lg font-medium text-slate-300 hover:text-white"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                About
-              </a>
-              <div className="h-px bg-slate-800 my-4" />
-              <button 
-                onClick={() => { navigate('/login'); setMobileMenuOpen(false); }}
-                className="block w-full text-left text-lg font-medium text-slate-300 hover:text-white"
-              >
-                Sign In
-              </button>
-              <button 
-                onClick={() => { navigate('/register'); setMobileMenuOpen(false); }}
-                className="w-full mt-4 bg-blue-600 text-white px-6 py-4 rounded-2xl font-bold hover:bg-blue-500 transition-all active:scale-95"
-              >
+          <div className="md:hidden absolute top-full left-0 right-0 border-t border-white/5 bg-slate-950/95 backdrop-blur-2xl animate-fade-in shadow-2xl">
+            <div className="px-6 py-8 space-y-6">
+              <a href="#features" className="block text-xl font-bold text-slate-200" onClick={() => setMobileMenuOpen(false)}>Features</a>
+              <a href="#solutions" className="block text-xl font-bold text-slate-200" onClick={() => setMobileMenuOpen(false)}>Solutions</a>
+              <div className="h-px bg-white/5" />
+              <button onClick={() => { navigate('/login'); setMobileMenuOpen(false); }} className="block w-full text-left text-xl font-bold text-slate-400">Sign In</button>
+              <button onClick={() => { navigate('/register'); setMobileMenuOpen(false); }} className="w-full bg-blue-600 text-white py-4 rounded-2xl font-black text-lg shadow-xl shadow-blue-500/20">
                 Register Now
               </button>
             </div>
@@ -134,45 +168,58 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero Section */}
-      <section className="relative pt-20 pb-32 overflow-hidden">
+      <section className="relative pt-40 pb-32 overflow-hidden z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-bold mb-8 animate-fade-in">
-            <Zap size={14} />
-            <span>VERSION 2.0 IS NOW LIVE</span>
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-black tracking-[0.2em] mb-10 animate-fade-in shadow-[0_0_20px_rgba(59,130,246,0.1)]">
+            <Sparkles size={12} className="animate-spin-slow" />
+            <span>{config['system.name']?.toUpperCase() || 'FMIS'} PLATFORM v3.0</span>
           </div>
           
-          <h1 className="text-5xl md:text-7xl font-extrabold text-white mb-6 tracking-tight leading-tight">
-            Financial Intelligence <br />
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-emerald-400 to-cyan-400">
-              For Modern Organizations
-            </span>
+          <h1 className="text-6xl md:text-8xl font-[950] text-white mb-8 tracking-tighter leading-[0.9] animate-slide-up">
+            {config['landing.hero_title'] || (
+                <>
+                Financial Intelligence <br />
+                <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-indigo-400 to-emerald-400">
+                    Engineered for Speed
+                </span>
+                </>
+            )}
           </h1>
           
-          <p className="max-w-2xl mx-auto text-lg md:text-xl text-slate-400 mb-10 leading-relaxed">
-            The all-in-one Financial Management & Intelligence System designed to streamline your operations, 
-            detect fraud, and provide deep insights into your organization's financial health.
+          <p className="max-w-3xl mx-auto text-lg md:text-xl text-slate-400/80 mb-12 leading-relaxed font-medium animate-slide-up" style={{ animationDelay: '0.1s' }}>
+            {config['landing.hero_subtitle'] || "The all-in-one Financial Management & Intelligence System designed to streamline your operations, detect fraud, and provide deep insights into your organization's health."}
           </p>
           
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-5 animate-slide-up" style={{ animationDelay: '0.2s' }}>
             <button onClick={() => navigate('/register')}
-                    className="group relative px-8 py-4 bg-blue-600 rounded-2xl font-bold text-white overflow-hidden transition-all hover:bg-blue-500 active:scale-95 shadow-xl shadow-blue-500/20">
-              <span className="relative z-10 flex items-center gap-2">
-                Get Started Now <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                    className="group relative px-10 py-5 bg-blue-600 rounded-2xl font-black text-white overflow-hidden transition-all hover:bg-blue-500 active:scale-95 shadow-2xl shadow-blue-500/40">
+              <span className="relative z-10 flex items-center gap-3">
+                {config['landing.cta_text'] || 'Start Scaling Your Business'} <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
               </span>
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
             </button>
             <button onClick={() => navigate('/login')}
-                    className="px-8 py-4 bg-slate-900 border border-slate-800 rounded-2xl font-bold text-white hover:bg-slate-800 transition-all active:scale-95">
-              Live Demo
+                    className="px-10 py-5 bg-slate-900/50 backdrop-blur-md border border-white/10 rounded-2xl font-black text-white hover:bg-slate-800 transition-all active:scale-95">
+              Live Interactive Demo
             </button>
           </div>
 
-          <div className="mt-20 relative max-w-5xl mx-auto">
-             <div className="absolute inset-0 bg-blue-500/20 blur-[100px] -z-10" />
-             <div className="rounded-3xl border border-slate-800 bg-slate-900/50 p-4 shadow-2xl backdrop-blur">
-                <div className="rounded-2xl overflow-hidden border border-slate-800 bg-slate-950 aspect-video flex items-center justify-center relative group">
-                  <img src="/dashboard_preview.png" alt="FMIS Dashboard Preview" className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700" />
-                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-slate-950/40">
-                    <span className="px-6 py-3 bg-white text-slate-950 rounded-full font-bold shadow-2xl">View Dashboard Features</span>
+          <div className="mt-24 relative max-w-6xl mx-auto animate-slide-up" style={{ animationDelay: '0.3s' }}>
+             <div className="absolute -top-20 -left-20 w-64 h-64 bg-blue-500/20 blur-[100px] rounded-full" />
+             <div className="absolute -bottom-20 -right-20 w-64 h-64 bg-emerald-500/20 blur-[100px] rounded-full" />
+             <div className="relative rounded-[2.5rem] border border-white/10 bg-slate-900/40 p-3 shadow-[0_0_100px_rgba(0,0,0,0.5)] backdrop-blur-xl group overflow-hidden">
+                <div className="rounded-[2rem] overflow-hidden bg-slate-950 aspect-[16/9] flex items-center justify-center relative">
+                  <div className="absolute inset-x-0 top-0 h-8 bg-slate-800/50 flex items-center px-4 gap-1.5 z-20">
+                     <div className="w-2.5 h-2.5 rounded-full bg-rose-500/50" />
+                     <div className="w-2.5 h-2.5 rounded-full bg-amber-500/50" />
+                     <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/50" />
+                     <div className="ml-4 h-4 w-60 bg-slate-900/50 rounded-md" />
+                  </div>
+                  <img src="/dashboard_preview.png" alt="Dashboard Preview" className="w-full h-full object-cover opacity-90 group-hover:scale-105 transition-all duration-1000" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent flex items-end justify-center pb-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button className="px-8 py-4 bg-white text-slate-950 rounded-2xl font-black shadow-2xl flex items-center gap-3">
+                      Explore Dashboard <LayoutDashboard size={18} />
+                    </button>
                   </div>
                 </div>
              </div>
@@ -181,23 +228,25 @@ export default function LandingPage() {
       </section>
 
       {/* Features Grid */}
-      <section id="features" className="py-32 bg-slate-950 relative">
+      <section id="features" className="py-40 bg-slate-950 relative z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-20">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Powerful Features, Simplified</h2>
-            <p className="text-slate-400 max-w-2xl mx-auto">
-              Everything you need to manage complex financial operations in a single, unified platform.
+          <div className="max-w-2xl mb-24">
+            <h2 className="text-[10px] font-black text-blue-500 uppercase tracking-[0.4em] mb-4">Core Infrastructure</h2>
+            <h3 className="text-4xl md:text-5xl font-black text-white mb-6 tracking-tighter">Everything you need, <br /> Built for Enterprise.</h3>
+            <p className="text-slate-400 text-lg leading-relaxed">
+              We've consolidated fragmented financial tools into a single, high-performance ecosystem powered by AI and real-time ledger auditing.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {features.map((f, i) => (
-              <div key={i} className="group p-8 rounded-3xl border border-slate-800 bg-slate-900/40 hover:bg-slate-900/60 transition-all hover:border-slate-700">
-                <div className="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500">
+              <div key={i} className="group p-10 rounded-[2.5rem] border border-white/5 bg-slate-900/20 hover:bg-slate-900/40 transition-all hover:border-white/10 relative overflow-hidden">
+                <div className="absolute -right-8 -bottom-8 w-24 h-24 bg-gradient-to-br from-blue-600/5 to-transparent blur-2xl group-hover:scale-150 transition-transform duration-700" />
+                <div className="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center mb-8 border border-white/5 group-hover:scale-110 group-hover:bg-white/10 transition-all duration-500">
                   {f.icon}
                 </div>
-                <h3 className="text-xl font-bold text-white mb-3">{f.title}</h3>
-                <p className="text-slate-400 text-sm leading-relaxed">{f.description}</p>
+                <h4 className="text-xl font-black text-white mb-4 tracking-tight">{f.title}</h4>
+                <p className="text-slate-400 text-sm leading-relaxed font-medium">{f.description}</p>
               </div>
             ))}
           </div>
@@ -205,18 +254,21 @@ export default function LandingPage() {
       </section>
 
       {/* Social Proof / Stats */}
-      <section className="py-24 border-y border-slate-800/50">
+      <section className="py-24 border-y border-white/5 bg-slate-950/50 backdrop-blur-sm relative z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-12 text-center">
             {[
-              { label: "Transactions Processed", val: "1.2M+" },
-              { label: "Active Organizations", val: "500+" },
-              { label: "Fraud Alerts Prevented", val: "15k+" },
-              { label: "Uptime Guarantee", val: "99.9%" }
+              { label: "Transactions Processed", val: "1.2M+", icon: <BarChart3 size={16} /> },
+              { label: "Active Organizations", val: "500+", icon: <Users size={16} /> },
+              { label: "Fraud Alerts Prevented", val: "15k+", icon: <Shield size={16} /> },
+              { label: "Uptime Guarantee", val: "99.9%", icon: <Zap size={16} /> }
             ].map((s, i) => (
-              <div key={i}>
-                <div className="text-3xl font-bold text-white mb-1">{s.val}</div>
-                <div className="text-xs text-slate-500 font-bold uppercase tracking-widest">{s.label}</div>
+              <div key={i} className="space-y-3">
+                <div className="flex items-center justify-center text-blue-500 mb-2">
+                    {s.icon}
+                </div>
+                <div className="text-4xl md:text-5xl font-black text-white tracking-tighter">{s.val}</div>
+                <div className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em]">{s.label}</div>
               </div>
             ))}
           </div>
@@ -224,36 +276,52 @@ export default function LandingPage() {
       </section>
 
       {/* Final CTA */}
-      <section className="py-32 relative overflow-hidden">
-        <div className="absolute inset-0 bg-blue-600/5 -z-10" />
+      <section className="py-40 relative overflow-hidden z-10">
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-blue-600/5 to-transparent -z-10" />
         <div className="max-w-4xl mx-auto px-4 text-center">
-          <h2 className="text-4xl md:text-5xl font-bold text-white mb-8">Ready to transform your <br /> financial management?</h2>
-          <p className="text-slate-400 mb-12 text-lg">
-            Join hundreds of organizations using FMIS to gain absolute control over their finances. 
-            Start your 30-day free trial today.
+          <div className="w-20 h-20 bg-blue-600/10 rounded-full flex items-center justify-center mx-auto mb-10 border border-blue-500/20 shadow-[0_0_50px_rgba(59,130,246,0.2)]">
+            <Box size={32} className="text-blue-500 animate-bounce" />
+          </div>
+          <h2 className="text-5xl md:text-7xl font-black text-white mb-10 tracking-tighter leading-tight">Ready to transform your <br /> financial operations?</h2>
+          <p className="text-slate-400/80 mb-14 text-xl font-medium max-w-2xl mx-auto leading-relaxed">
+            Join 500+ enterprises using {appName} to achieve absolute financial clarity. 
+            No credit card required for your first 30 days.
           </p>
-          <button onClick={() => navigate('/register')}
-                  className="px-10 py-5 bg-white text-slate-950 rounded-2xl font-bold text-lg hover:bg-blue-50 transition-all shadow-2xl shadow-white/10 active:scale-95">
-            Register Your Organization
-          </button>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
+            <button onClick={() => navigate('/register')}
+                    className="px-12 py-6 bg-white text-slate-950 rounded-[2rem] font-black text-xl hover:bg-blue-50 transition-all shadow-2xl shadow-white/10 active:scale-95">
+              Start Free Trial
+            </button>
+            <button className="flex items-center gap-3 font-black text-white group">
+                Contact Sales <ChevronRight className="group-hover:translate-x-1 transition-transform" />
+            </button>
+          </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="py-12 border-t border-slate-800/50 text-slate-500 text-sm">
-        <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-6">
-          <div className="flex items-center gap-2">
-            <TrendingUp size={18} className="text-blue-500" />
-            <span className="font-bold text-white">FMIS</span>
-            <span className="ml-2">© 2026 Skylink Solutions. All rights reserved.</span>
+      <footer className="py-20 border-t border-white/5 text-slate-400/60 text-sm relative z-10">
+        <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-10">
+          <div className="flex flex-col items-center md:items-start gap-4">
+            <div className="flex items-center gap-3">
+              {logoUrl ? <img src={logoUrl} alt={appName} className="h-8 w-auto grayscale opacity-50" /> : <TrendingUp size={18} className="text-blue-500/50" />}
+              <span className="font-black text-white/50 tracking-tighter uppercase text-xl">{appName}</span>
+            </div>
+            <p className="font-medium text-xs">© 2026 Skylink Solutions. Global Finance OS.</p>
           </div>
-          <div className="flex gap-8">
-            <Link to="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
-            <Link to="/terms" className="hover:text-white transition-colors">Terms of Service</Link>
-            <a href={`mailto:${supportEmail}`} className="hover:text-white transition-colors">Contact Support</a>
+          <div className="flex flex-wrap justify-center gap-10 text-[11px] font-black uppercase tracking-widest">
+            <Link to="/privacy" className="hover:text-white transition-colors">Privacy</Link>
+            <Link to="/terms" className="hover:text-white transition-colors">Terms</Link>
+            <a href={`mailto:${config['system.support_email'] || 'support@fmis.ai'}`} className="hover:text-white transition-colors">Support</a>
+            <div className="flex gap-4">
+                <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 cursor-pointer transition-colors">
+                    <Globe size={14} />
+                </div>
+            </div>
           </div>
         </div>
       </footer>
     </div>
   )
 }
+

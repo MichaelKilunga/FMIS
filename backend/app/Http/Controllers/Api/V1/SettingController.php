@@ -35,7 +35,12 @@ class SettingController extends Controller
 
     public function getSystemSettings(): JsonResponse
     {
-        $keys = ['system.privacy_policy', 'system.terms_of_service', 'system.support_email', 'maps.google_api_key'];
+        $keys = [
+            'system.privacy_policy', 'system.terms_of_service', 'system.support_email', 'maps.google_api_key',
+            'system.name', 'system.logo', 'system.favicon', 'system.primary_color', 'system.accent_color',
+            'system.seo.title', 'system.seo.description', 'system.seo.keywords',
+            'landing.hero_title', 'landing.hero_subtitle', 'landing.cta_text'
+        ];
         $results = [];
         foreach ($keys as $key) {
             $results[$key] = $this->settings->get($key, null, null);
@@ -93,14 +98,49 @@ class SettingController extends Controller
 
     public function updateBranding(Request $request): JsonResponse
     {
-        $user   = $request->user();
-        $tenant = $user->tenant;
+        $user = $request->user();
+        $isSystemWide = $request->boolean('is_system_wide') && $user->can('manage-tenants');
 
         $data = $request->validate([
+            'name'            => 'nullable|string|max:255',
+            'email'           => 'nullable|email|max:255',
+            'phone'           => 'nullable|string|max:100',
+            'address'         => 'nullable|string|max:1000',
             'primary_color'   => 'nullable|string|max:20',
             'secondary_color' => 'nullable|string|max:20',
             'accent_color'    => 'nullable|string|max:20',
+            'is_system_wide'  => 'nullable|boolean',
         ]);
+
+        if ($isSystemWide) {
+            // Update global settings
+            if ($request->hasFile('logo')) {
+                $request->validate(['logo' => 'image|max:4096']);
+                $path = $request->file('logo')->store("system/logos", 'public');
+                $this->settings->set('system.logo', asset('storage/' . $path), null, 'branding');
+            }
+
+            if ($request->hasFile('favicon')) {
+                $request->validate(['favicon' => 'image|max:1024']);
+                $path = $request->file('favicon')->store("system/favicons", 'public');
+                $this->settings->set('system.favicon', asset('storage/' . $path), null, 'branding');
+            }
+
+            if (isset($data['name'])) $this->settings->set('system.name', $data['name'], null, 'branding');
+            if (isset($data['primary_color'])) $this->settings->set('system.primary_color', $data['primary_color'], null, 'branding', 'color');
+            if (isset($data['secondary_color'])) $this->settings->set('system.secondary_color', $data['secondary_color'], null, 'branding', 'color');
+            if (isset($data['accent_color'])) $this->settings->set('system.accent_color', $data['accent_color'], null, 'branding', 'color');
+
+            $this->audit->log('system_branding_updated', null, [], ['updated_by' => $user->id]);
+            
+            return response()->json(['message' => 'System branding updated successfully']);
+        }
+
+        // Default: Tenant branding
+        $tenant = $user->tenant;
+        if (!$tenant) {
+            return response()->json(['error' => 'Tenant not found'], 404);
+        }
 
         if ($request->hasFile('logo')) {
             $request->validate(['logo' => 'image|max:4096']);

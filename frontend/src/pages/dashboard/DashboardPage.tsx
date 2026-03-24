@@ -315,6 +315,7 @@ export default function DashboardPage() {
               {/* Quick Actions Row */}
               <div className="grid grid-cols-2 md:grid-cols-5 gap-4 animate-slide-in" style={{ animationDelay: '100ms', animationFillMode: 'both' }}>
                 <QuickAction icon={Plus} label="New Transaction" to="/app/transactions" colorClass="bg-gradient-to-br from-emerald-500 to-emerald-700" />
+                <QuickAction icon={Clock} label="Attendance" to="/app/attendance" colorClass="bg-gradient-to-br from-indigo-500 to-indigo-700" />
                 <QuickAction icon={FileText} label="Create Invoice" to="/app/invoices" colorClass="bg-gradient-to-br from-blue-500 to-blue-700" />
                 <QuickAction icon={ListChecks} label="Add Task" to="/app/tasks" colorClass="bg-gradient-to-br from-indigo-500 to-indigo-700" />
                 <QuickAction icon={Calendar} label="Manage Billing" to="/app/billing" colorClass="bg-gradient-to-br from-purple-500 to-purple-700" />
@@ -322,9 +323,39 @@ export default function DashboardPage() {
                 <QuickAction icon={AlertTriangle} label="Review Fraud" to="/app/fraud" colorClass="bg-gradient-to-br from-red-500 to-red-700" />
               </div>
 
-              {/* KPI Cards */}
+              {/* Duty & Productivity Center */}
+              <div className="flex items-center gap-3 mb-4">
+                <div className="h-8 w-1 bg-indigo-500 rounded-full"></div>
+                <h2 className="text-xl font-bold text-white tracking-tight">Personal Duty Center</h2>
+              </div>
+
+              {/* KPI Cards and Attendance */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 <AttendanceWidget />
+                <KpiCard 
+                  label="Tasks Pending" 
+                  value={summary.tasksCount} 
+                  icon={CheckSquare} 
+                  color="text-indigo-400" 
+                  delay={100} 
+                  trend={summary.overdueTasksCount > 0 ? `${summary.overdueTasksCount} overdue` : 'On track'} 
+                />
+                <KpiCard 
+                  label="Pending Approvals" 
+                  value={summary.pendingApprovals} 
+                  icon={Clock} 
+                  color="text-amber-400" 
+                  delay={150} 
+                  trend={summary.pendingApprovals > 0 ? 'Requires action' : 'All clear'} 
+                />
+              </div>
+
+              <div className="flex items-center gap-3 mb-4 mt-12">
+                <div className="h-8 w-1 bg-emerald-500 rounded-full"></div>
+                <h2 className="text-xl font-bold text-white tracking-tight">Financial Intelligence</h2>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 <KpiCard 
                   label="Total Income"         
                   value={fmt(summary?.totalIncome)}      
@@ -341,12 +372,8 @@ export default function DashboardPage() {
                   delay={300} 
                   trend={(summary?.pendingExpense || 0) > 0 ? `+ ${fmt(summary?.pendingExpense)} pending` : "-2.1% from last month"} 
                 />
-                <KpiCard label="Net Position"         value={fmt((summary?.totalIncome || 0) - (summary?.totalExpense || 0))} icon={CheckCircle} color={(summary?.totalIncome || 0) >= (summary?.totalExpense || 0) ? 'text-emerald-400' : 'text-red-400'} delay={400} />
+                <KpiCard label="Net Position" value={fmt((summary?.totalIncome || 0) - (summary?.totalExpense || 0))} icon={CheckCircle} color={(summary?.totalIncome || 0) >= (summary?.totalExpense || 0) ? 'text-emerald-400' : 'text-red-400'} delay={400} />
                 
-                <KpiCard label="Pending Approvals"    value={summary.pendingApprovals}      icon={Clock}         color="text-amber-400"   delay={500} trend={summary.pendingApprovals > 0 ? 'Requires attention' : 'All caught up'} />
-                <KpiCard label="Open Fraud Alerts"    value={summary.openFraudAlerts}       icon={AlertTriangle} color="text-rose-400"    delay={600} trend={summary.openFraudAlerts > 0 ? 'Urgent review needed' : 'System secure'} />
-                <KpiCard label="Active Tasks"        value={summary.tasksCount}            icon={CheckSquare}   color="text-indigo-400"  delay={700} trend={summary.overdueTasksCount > 0 ? `${summary.overdueTasksCount} tasks overdue` : 'On track'} />
-
                 {user?.roles?.includes('director') && (
                   <>
                     <KpiCard 

@@ -43,6 +43,7 @@ Route::prefix('v1')->group(function () {
         Route::post('register', [RegisterController::class, 'register']);
         Route::post('forgot-password', [ForgotPasswordController::class, 'sendResetLinkEmail'])->name('password.email');
         Route::post('reset-password', [ResetPasswordController::class, 'reset'])->name('password.update');
+        Route::get('verify-email/{id}/{hash}', [AuthController::class, 'verifyEmail'])->name('verification.verify');
     });
 
     Route::get('system-settings', [SettingController::class, 'getSystemSettings']);
@@ -56,6 +57,7 @@ Route::prefix('v1')->group(function () {
             Route::get('me', [AuthController::class, 'me']);
             Route::post('profile', [AuthController::class, 'updateProfile']);
             Route::post('change-password', [AuthController::class, 'changePassword']);
+            Route::post('resend-verification', [AuthController::class, 'resendVerification']);
         });
 
         // Users

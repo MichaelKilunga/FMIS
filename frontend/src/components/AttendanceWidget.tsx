@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import api from '../services/api'
-import { MapPin, LogIn, LogOut, Loader2, CheckCircle2 } from 'lucide-react'
+import { MapPin, LogIn, LogOut, Loader2, CheckCircle2, Clock } from 'lucide-react'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
 
@@ -108,75 +108,108 @@ export default function AttendanceWidget() {
   const isCompleted = attendance && attendance.check_out_time
 
   return (
-    <div className="glass-card p-6 rounded-2xl border-t-4 border-t-indigo-500 hover:shadow-lg transition-all relative overflow-hidden group">
-      <div className="absolute -right-10 -top-10 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+    <div className="glass-card p-6 rounded-2xl border-t-4 border-t-indigo-500 hover:shadow-2xl transition-all relative overflow-hidden group min-h-[220px] flex flex-col justify-between">
+      {/* Dynamic Background Glow */}
+      <div className={clsx(
+        "absolute -right-10 -top-10 w-40 h-40 rounded-full blur-3xl opacity-20 transition-all duration-500",
+        isCompleted ? "bg-emerald-500" : isCheckedIn ? "bg-amber-500 animate-pulse" : "bg-indigo-500"
+      )}></div>
       
-      <div className="flex justify-between items-start mb-4 relative z-10">
-        <div>
-          <h3 className="text-lg font-bold text-white flex items-center gap-2">
-            <MapPin size={18} className="text-indigo-400" /> Daily Attendance
-          </h3>
-          <p className="text-xs text-slate-400 mt-1">Check-in at the office perimeter</p>
+      <div className="flex justify-between items-start relative z-10">
+        <div className="flex items-center gap-3">
+          <div className={clsx(
+            "p-2.5 rounded-xl shadow-inner transition-transform group-hover:scale-110 group-hover:rotate-3",
+            isCompleted ? "bg-emerald-500/10 text-emerald-400" : isCheckedIn ? "bg-amber-500/10 text-amber-400" : "bg-indigo-500/10 text-indigo-400"
+          )}>
+            <MapPin size={22} />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-white tracking-tight">Staff Attendance</h3>
+            <p className="text-[10px] text-slate-400 uppercase tracking-widest font-semibold mt-0.5">Verification Zone</p>
+          </div>
         </div>
         
         {isCompleted ? (
-          <span className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-400 rounded-md border border-emerald-500/30 flex items-center gap-1.5">
-            <CheckCircle2 size={12} /> Completed
-          </span>
+          <div className="flex flex-col items-end">
+            <span className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-400 rounded-lg border border-emerald-500/30 flex items-center gap-1.5 shadow-[0_0_15px_rgba(16,185,129,0.2)]">
+              <CheckCircle2 size={12} /> Shift Ended
+            </span>
+          </div>
         ) : isCheckedIn ? (
-          <span className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-400 rounded-md border border-amber-500/30 animate-pulse">
-            Active Shift
+          <span className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-400 rounded-lg border border-amber-500/30 animate-pulse flex items-center gap-1.5">
+             <div className="w-1.5 h-1.5 rounded-full bg-amber-400"></div> Tracking Active
           </span>
         ) : (
-          <span className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider bg-slate-800 text-slate-400 rounded-md border border-slate-700">
-            Pending
+          <span className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider bg-slate-800 text-slate-500 rounded-lg border border-slate-700">
+            Awaiting Check-in
           </span>
         )}
       </div>
 
-      <div className="relative z-10 mt-6">
+      <div className="relative z-10 mt-6 flex-1 flex flex-col justify-center">
         {isCompleted ? (
-          <div className="flex flex-col items-center justify-center p-4 bg-emerald-950/20 rounded-xl border border-emerald-500/20 text-center">
-            <p className="text-sm font-bold text-emerald-400 mb-1">Shift Completed</p>
-            <p className="text-xs text-slate-400 flex items-center justify-center gap-4">
-              <span>In: {new Date(attendance.check_in_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-              <span className="w-1 h-1 rounded-full bg-slate-600"></span>
-              <span>Out: {new Date(attendance.check_out_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-            </p>
+          <div className="flex flex-col items-center justify-center p-4 bg-slate-900/40 rounded-2xl border border-slate-700/50 text-center backdrop-blur-md">
+            <div className="flex items-center gap-4 mb-3">
+              <div className="text-left leading-tight">
+                <span className="text-[10px] text-slate-500 uppercase font-black block">Clock In</span>
+                <span className="text-sm font-bold text-slate-200">{new Date(attendance.check_in_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+              </div>
+              <div className="h-8 w-px bg-slate-700 mx-1"></div>
+              <div className="text-left leading-tight">
+                <span className="text-[10px] text-slate-500 uppercase font-black block">Clock Out</span>
+                <span className="text-sm font-bold text-slate-200">{new Date(attendance.check_out_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+              </div>
+            </div>
             {timeInZone > 0 && (
-              <p className="text-[10px] text-emerald-500 uppercase tracking-widest font-bold mt-2 bg-emerald-500/10 px-3 py-1 rounded-full">
-                Time in Zone: {Math.floor(timeInZone / 60)}h {timeInZone % 60}m
-              </p>
+              <div className="flex items-center gap-2 px-4 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full animate-fade-in">
+                <Clock size={12} className="text-emerald-400" />
+                <span className="text-xs font-bold text-emerald-400">{Math.floor(timeInZone / 60)}h {timeInZone % 60}m Active in Zone</span>
+              </div>
             )}
           </div>
         ) : isCheckedIn ? (
-          <div className="flex flex-col items-center gap-4">
-            <div className="w-full flex justify-between text-xs text-slate-400 mb-2 px-1">
-              <span>Checked in at {new Date(attendance.check_in_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-              {timeInZone > 0 && (
-                <span className="font-bold text-indigo-400 animate-pulse">
-                  {Math.floor(timeInZone / 60)}h {timeInZone % 60}m in zone
-                </span>
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between p-4 bg-indigo-950/20 rounded-2xl border border-indigo-500/20 mb-1">
+              <div className="flex flex-col">
+                <span className="text-[10px] text-slate-400 uppercase font-bold tracking-tighter">Current Session</span>
+                <span className="text-base font-black text-white">{new Date(attendance.check_in_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+              </div>
+              {timeInZone > 0 ? (
+                <div className="text-right">
+                  <span className="text-[10px] text-indigo-400 uppercase font-black block animate-pulse">Efficiency Tracking</span>
+                  <span className="text-xl font-black text-indigo-300 drop-shadow-[0_0_10px_rgba(129,140,248,0.4)]">
+                    {Math.floor(timeInZone / 60)}h {timeInZone % 60}m
+                  </span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-slate-500 text-xs italic">
+                  <Loader2 size={12} className="animate-spin" /> Verifying zone...
+                </div>
               )}
             </div>
             <button
               onClick={() => handleAction('check-out')}
               disabled={actionLoading}
-              className="w-full py-3 px-4 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl transition-all shadow-[0_0_15px_rgba(245,158,11,0.3)] hover:shadow-[0_0_20px_rgba(245,158,11,0.5)] flex items-center justify-center gap-2"
+              className="w-full py-4 px-6 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-black rounded-2xl transition-all shadow-[0_10px_20px_-10px_rgba(245,158,11,0.5)] active:scale-[0.98] flex items-center justify-center gap-3 uppercase tracking-widest text-sm"
             >
-              {actionLoading ? <Loader2 size={18} className="animate-spin" /> : <LogOut size={18} />}
-              {actionLoading ? 'Processing...' : 'Check Out Now'}
+              {actionLoading ? <Loader2 size={18} className="animate-spin" /> : <LogOut size={20} />}
+              {actionLoading ? 'Synchronizing...' : 'Terminate Shift'}
             </button>
           </div>
         ) : (
-          <button
-            onClick={() => handleAction('check-in')}
-            disabled={actionLoading}
-            className="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition-all shadow-[0_0_15px_rgba(99,102,241,0.3)] hover:shadow-[0_0_20px_rgba(99,102,241,0.5)] flex items-center justify-center gap-2"
-          >
-            {actionLoading ? <Loader2 size={18} className="animate-spin" /> : <LogIn size={18} />}
-            {actionLoading ? 'Verifying Coordinates...' : 'Check In Now'}
-          </button>
+          <div className="flex flex-col gap-4">
+            <div className="p-4 bg-slate-800/20 rounded-2xl border border-slate-700/30 text-center">
+              <p className="text-sm text-slate-400">Ready to start? Ensure you're within the geofenced perimeter.</p>
+            </div>
+            <button
+              onClick={() => handleAction('check-in')}
+              disabled={actionLoading}
+              className="w-full py-4 px-6 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white font-black rounded-2xl transition-all shadow-[0_10px_20px_-10px_rgba(79,70,229,0.5)] active:scale-[0.98] flex items-center justify-center gap-3 uppercase tracking-widest text-sm"
+            >
+              {actionLoading ? <Loader2 size={18} className="animate-spin" /> : <LogIn size={20} />}
+              {actionLoading ? 'Detecting Location...' : 'Establish Connection'}
+            </button>
+          </div>
         )}
       </div>
     </div>

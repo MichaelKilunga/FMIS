@@ -38,7 +38,7 @@ interface InvoiceFormData {
 }
 
 export default function InvoicesPage() {
-  const { user } = useAuthStore()
+  const { user, tenant } = useAuthStore()
   const { settings } = useSettingsStore()
 
   const [clients, setClients] = useState<Client[]>([])
@@ -71,7 +71,7 @@ export default function InvoicesPage() {
       issue_date: today,
       tax_rate: 0,
       discount: 0,
-      terms: 'Payment For: services rendered\nContact: Sales\nPhone: +255 (0) 796 725 725',
+      terms: (settings['invoice_default_terms'] as string) || (settings['terms'] as string) || `Payment For: Services\nContact: Sales\nPhone: ${tenant?.phone || '+255 (0) 000 000 000'}`,
       items: [{ description: '', quantity: 1, unit: '', unit_price: 0 }],
     }
   })

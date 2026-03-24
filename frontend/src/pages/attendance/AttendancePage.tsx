@@ -14,6 +14,7 @@ interface AttendanceRecord {
   check_in_location: any
   check_out_location: any
   status: string
+  time_in_zone_minutes: number
   notes: string | null
   user?: {
     id: number
@@ -92,7 +93,8 @@ export default function AttendancePage() {
                 <th className="p-4 text-xs font-bold text-slate-300 uppercase tracking-wider">Date</th>
                 <th className="p-4 text-xs font-bold text-slate-300 uppercase tracking-wider">Check In</th>
                 <th className="p-4 text-xs font-bold text-slate-300 uppercase tracking-wider">Check Out</th>
-                <th className="p-4 text-xs font-bold text-slate-300 uppercase tracking-wider">Duration</th>
+                <th className="p-4 text-xs font-bold text-slate-300 uppercase tracking-wider">Total Shift</th>
+                <th className="p-4 text-xs font-bold text-slate-300 uppercase tracking-wider">Active In Zone</th>
                 <th className="p-4 text-xs font-bold text-slate-300 uppercase tracking-wider">Status</th>
               </tr>
             </thead>
@@ -147,6 +149,11 @@ export default function AttendancePage() {
                       </td>
                       <td className="p-4">
                         <span className="text-slate-400 font-mono text-sm">{duration}</span>
+                      </td>
+                      <td className="p-4">
+                        <span className="text-indigo-400 font-bold text-sm">
+                          {record.time_in_zone_minutes ? `${Math.floor(record.time_in_zone_minutes / 60)}h ${record.time_in_zone_minutes % 60}m` : '0h 0m'}
+                        </span>
                       </td>
                       <td className="p-4">
                         <span className={`px-2 py-1 text-xs font-medium rounded-md uppercase tracking-wide border ${

@@ -56,8 +56,9 @@ class RegisterController extends Controller
                 'name'      => $request->director_name,
                 'email'     => $request->email,
                 'password'  => $request->password,
-                'is_active' => true,
             ]);
+            
+            $user->sendEmailVerificationNotification();
 
             // 3. Assign Director and Tenant Admin Roles
             $directorRole = Role::firstOrCreate(['name' => 'director', 'guard_name' => 'web']);
@@ -80,6 +81,7 @@ class RegisterController extends Controller
                     'id'         => $user->id,
                     'name'       => $user->name,
                     'email'      => $user->email,
+                    'is_verified'=> $user->hasVerifiedEmail(),
                     'tenant_id'  => $user->tenant_id,
                     'roles'      => [$directorRole->name, $adminRole->name],
                 ],

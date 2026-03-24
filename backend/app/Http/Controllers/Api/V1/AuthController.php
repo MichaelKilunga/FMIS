@@ -63,6 +63,7 @@ class AuthController extends Controller
         $user = $request->user();
         $data = $request->validate([
             'name'       => 'sometimes|string|max:255',
+            'email'      => 'sometimes|email|max:255|unique:users,email,'.$user->id,
             'phone'      => 'sometimes|nullable|string',
             'department' => 'sometimes|nullable|string',
         ]);
@@ -73,8 +74,51 @@ class AuthController extends Controller
             $data['avatar'] = $path;
         }
 
+        $emailChanged = isset($data['email']) && $data['email'] !== $user->email;
+
         $user->update($data);
-        return response()->json(['user' => $this->userResource($user->fresh())]);
+
+        if ($emailChanged) {
+            $user->email_verified_at = null;
+            $user->save();
+            $user->sendEmailVerificationNotification();
+        }
+
+        return response()->json([
+            'user' => $this->userResource($user->fresh()),
+            'email_changed' => $emailChanged
+        ]);
+    }
+
+    public function resendVerification(Request $request): JsonResponse
+    {
+        if ($request->user()->hasVerifiedEmail()) {
+            return response()->json(['message' => 'Email already verified.'], 400);
+        }
+
+        $request->user()->sendEmailVerificationNotification();
+
+        return response()->json(['message' => 'Verification link sent.']);
+    }
+
+    public function verifyEmail(Request $request, $id, $hash): JsonResponse
+    {
+        $user = User::findOrFail($id);
+
+        if (!hash_equals((string) $hash, sha1($user->getEmailForVerification()))) {
+            return response()->json(['message' => 'Invalid verification link.'], 403);
+        }
+
+        if ($user->hasVerifiedEmail()) {
+            return response()->json(['message' => 'Email already verified.']);
+        }
+
+        if ($user->markEmailAsVerified()) {
+            // Log audit
+            $this->audit->log('email_verified', $user, [], [], [], $user->tenant_id, $user->id);
+        }
+
+        return response()->json(['message' => 'Email verified successfully.']);
     }
 
     public function changePassword(Request $request): JsonResponse
@@ -108,6 +152,7 @@ class AuthController extends Controller
             'phone'      => $user->phone,
             'department' => $user->department,
             'avatar_url' => $user->avatar_url,
+            'is_verified'=> $user->hasVerifiedEmail(),
             'is_active'  => $user->is_active,
             'tenant_id'  => $user->tenant_id,
             'tenant'     => $user->tenant ? $user->tenant->branding : null,

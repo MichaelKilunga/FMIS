@@ -7,6 +7,8 @@ export interface Tenant {
   name: string
   slug: string
   email?: string
+  phone?: string
+  address?: string
   logo?: string
   favicon?: string
   primary_color: string
@@ -15,6 +17,7 @@ export interface Tenant {
   currency: string
   timezone: string
   plan: 'basic' | 'pro' | 'enterprise'
+  is_active: boolean
 }
 
 export interface User {
@@ -25,6 +28,7 @@ export interface User {
   department?: string
   avatar_url: string
   is_active: boolean
+  is_verified: boolean
   tenant_id: number
   roles: string[]
   permissions: string[]
@@ -153,6 +157,7 @@ export interface ApprovalStep {
   threshold_min?: number
   threshold_max?: number
   sla_hours: number
+  require_all?: boolean
 }
 
 export interface Approval {
