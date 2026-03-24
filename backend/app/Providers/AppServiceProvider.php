@@ -27,7 +27,7 @@ class AppServiceProvider extends ServiceProvider
         \App\Models\Task::observe(\App\Observers\TaskObserver::class);
         
         \Illuminate\Auth\Notifications\VerifyEmail::createUrlUsing(function ($notifiable) {
-            $frontendUrl = env('FRONTEND_URL', 'http://localhost:5173');
+            $frontendUrl = config('app.frontend_url');
             return "{$frontendUrl}/verify-email/{$notifiable->getKey()}/" . sha1($notifiable->getEmailForVerification());
         });
 
