@@ -33,7 +33,11 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         runtimeCaching: [
           {
-            urlPattern: /^https?:\/\/.+\/api\/v1\/.*/i,
+            // Only cache GET requests — POST/PUT/DELETE must never be intercepted
+            // by the Service Worker as the Cache API only stores GET responses,
+            // causing a 405 "Method Not Allowed" on mutation endpoints.
+            urlPattern: ({ request, url }) =>
+              request.method === 'GET' && /\/api\/v1\//.test(url.pathname),
             handler: 'NetworkFirst',
             options: {
               cacheName: 'fmis-api-cache',
