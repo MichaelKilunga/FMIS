@@ -31,6 +31,11 @@ class AppServiceProvider extends ServiceProvider
             return "{$frontendUrl}/verify-email/{$notifiable->getKey()}/" . sha1($notifiable->getEmailForVerification());
         });
 
+        \Illuminate\Auth\Notifications\ResetPassword::createUrlUsing(function ($notifiable, $token) {
+            $frontendUrl = config('app.frontend_url');
+            return "{$frontendUrl}/reset-password?token={$token}&email=" . urlencode($notifiable->getEmailForVerification());
+        });
+
         // Load session lifetime from settings (system-wide)
         $lifetime = $settings->get('auth.session_lifetime');
         if ($lifetime) {
