@@ -47,8 +47,8 @@ export default function RegisterPage() {
     setLoading(true)
     try {
       const res = await authApi.register(data)
-      const { token, user } = res.data
-      setAuth(user, token)
+      const { token, user, tenant } = res.data
+      setAuth(user, token, tenant)
       toast.success(`Welcome to FMIS, ${user.name}! Your organization is ready.`)
       navigate('/app/dashboard')
     } catch (err: any) {
