@@ -51,8 +51,10 @@ class Tenant extends Model
 
     public function getBrandingAttribute(): array
     {
-        // Fetch settings from the related table instead of only the JSON column
-        $sets = $this->settings->keyBy('key')->map(fn($s) => $s->typed_value);
+        // Fetch settings from the related table using the relationship method directly
+        // to avoid shadowing if there's a 'settings' column in the tenants table.
+        $sets = ($this->settings()->get() ?? collect())->keyBy('key')
+            ->map(fn($s) => $s->typed_value);
         
         return [
             'primary_color'   => $this->primary_color ?? '#3B82F6',
