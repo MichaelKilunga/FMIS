@@ -21,6 +21,78 @@ interface OfficeLocation {
   radius: number
 }
 
+// Sub-component for the Google Map to manage the loader stably
+function MapView({ apiKey, mapCenter, handleMapClick, locations, activeLocationId, setActiveLocationId, handleMarkerDragEnd }: {
+  apiKey: string,
+  mapCenter: { lat: number, lng: number },
+  handleMapClick: (e: google.maps.MapMouseEvent) => void,
+  locations: OfficeLocation[],
+  activeLocationId: string | null,
+  setActiveLocationId: (id: string | null) => void,
+  handleMarkerDragEnd: (id: string, e: google.maps.MapMouseEvent) => void
+}) {
+  const { isLoaded, loadError } = useJsApiLoader({
+    id: 'google-map-script',
+    googleMapsApiKey: apiKey,
+  })
+
+  const containerStyle = {
+    width: '100%',
+    height: '400px',
+    borderRadius: '0.75rem'
+  }
+
+  if (loadError) return <div className="p-4 text-center text-red-400">Error loading maps.</div>
+  
+  if (!isLoaded) return (
+     <div className="w-full h-[400px] flex items-center justify-center">
+        <Loader2 className="animate-spin text-blue-500" size={30} />
+     </div>
+  )
+
+  return (
+    <GoogleMap
+      mapContainerStyle={containerStyle}
+      center={mapCenter}
+      zoom={13}
+      onClick={handleMapClick}
+      options={{
+        streetViewControl: false,
+        mapTypeControl: false,
+        styles: [
+          { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
+          { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
+          { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
+          { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] }
+        ]
+      }}
+    >
+      {locations.map(loc => (
+        <div key={loc.id}>
+          <Marker 
+            position={{ lat: loc.lat, lng: loc.lng }} 
+            draggable 
+            onDragEnd={(e) => handleMarkerDragEnd(loc.id, e)}
+            onClick={() => setActiveLocationId(loc.id)}
+            icon={activeLocationId === loc.id ? 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png' : 'http://maps.google.com/mapfiles/ms/icons/red-dot.png'}
+          />
+          <Circle
+            center={{ lat: loc.lat, lng: loc.lng }}
+            radius={loc.radius}
+            options={{
+              fillColor: activeLocationId === loc.id ? '#3B82F6' : '#EF4444',
+              fillOpacity: 0.2,
+              strokeColor: activeLocationId === loc.id ? '#3B82F6' : '#EF4444',
+              strokeOpacity: 0.8,
+              strokeWeight: activeLocationId === loc.id ? 2 : 1,
+            }}
+          />
+        </div>
+      ))}
+    </GoogleMap>
+  )
+}
+
 export default function OfficeMapPicker() {
   const { settings, setSettings } = useSettingsStore()
   const [apiKey, setApiKey] = useState<string>('')
@@ -68,13 +140,6 @@ export default function OfficeMapPicker() {
       console.error('Failed to parse locations', e)
     }
   }, [settings])
-
-  const { isLoaded, loadError } = useJsApiLoader({
-    id: 'google-map-script',
-    googleMapsApiKey: apiKey,
-  })
-
-  const activeLocation = locations.find(l => l.id === activeLocationId)
 
   const handleMapClick = useCallback((e: google.maps.MapMouseEvent) => {
     if (e.latLng && activeLocationId) {
@@ -135,8 +200,18 @@ export default function OfficeMapPicker() {
   }
 
   if (loadingKey) return <div className="p-4 text-center text-slate-400">Loading map configuration...</div>
-  if (!apiKey) return <div className="p-4 text-center text-slate-400 border border-slate-700/50 rounded-xl bg-slate-800/30">Google Maps API key is not configured in system settings.</div>
-  if (loadError) return <div className="p-4 text-center text-red-400">Error loading maps.</div>
+  
+  if (!apiKey) return (
+    <div className="glass-card p-10 text-center animate-fade-in">
+        <Map className="mx-auto text-slate-600 mb-4" size={48} />
+        <h3 className="text-xl font-bold text-white mb-2">Google Maps Not Configured</h3>
+        <p className="text-slate-400 max-w-md mx-auto mb-6">
+          Authorized office perimeters require a Google Maps API Key. Please contact the system administrator to configure the API key in System Settings.
+        </p>
+    </div>
+  )
+
+  const activeLocation = locations.find(l => l.id === activeLocationId)
 
   return (
     <div className="glass-card p-6 mt-6 animate-fade-in">
@@ -154,51 +229,15 @@ export default function OfficeMapPicker() {
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 relative border border-slate-700/50 rounded-xl overflow-hidden bg-slate-800 shadow-inner">
-          {isLoaded ? (
-            <GoogleMap
-              mapContainerStyle={containerStyle}
-              center={mapCenter}
-              zoom={13}
-              onClick={handleMapClick}
-              options={{
-                streetViewControl: false,
-                mapTypeControl: false,
-                styles: [
-                  { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
-                  { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
-                  { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
-                  { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] }
-                ]
-              }}
-            >
-              {locations.map(loc => (
-                <div key={loc.id}>
-                  <Marker 
-                    position={{ lat: loc.lat, lng: loc.lng }} 
-                    draggable 
-                    onDragEnd={(e) => handleMarkerDragEnd(loc.id, e)}
-                    onClick={() => setActiveLocationId(loc.id)}
-                    icon={activeLocationId === loc.id ? 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png' : 'http://maps.google.com/mapfiles/ms/icons/red-dot.png'}
-                  />
-                  <Circle
-                    center={{ lat: loc.lat, lng: loc.lng }}
-                    radius={loc.radius}
-                    options={{
-                      fillColor: activeLocationId === loc.id ? '#3B82F6' : '#EF4444',
-                      fillOpacity: 0.2,
-                      strokeColor: activeLocationId === loc.id ? '#3B82F6' : '#EF4444',
-                      strokeOpacity: 0.8,
-                      strokeWeight: activeLocationId === loc.id ? 2 : 1,
-                    }}
-                  />
-                </div>
-              ))}
-            </GoogleMap>
-          ) : (
-             <div className="w-full h-[400px] flex items-center justify-center">
-                <Loader2 className="animate-spin text-blue-500" size={30} />
-             </div>
-          )}
+          <MapView 
+            apiKey={apiKey}
+            mapCenter={mapCenter}
+            handleMapClick={handleMapClick}
+            locations={locations}
+            activeLocationId={activeLocationId}
+            setActiveLocationId={setActiveLocationId}
+            handleMarkerDragEnd={handleMarkerDragEnd}
+          />
         </div>
 
         <div className="space-y-4">

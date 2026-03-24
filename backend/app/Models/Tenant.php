@@ -39,7 +39,7 @@ class Tenant extends Model
         return $this->hasMany(Account::class);
     }
 
-    public function settings()
+    public function tenantSettings()
     {
         return $this->hasMany(Setting::class);
     }
@@ -53,7 +53,7 @@ class Tenant extends Model
     {
         // Fetch settings from the related table using the relationship method directly
         // to avoid shadowing if there's a 'settings' column in the tenants table.
-        $sets = ($this->settings()->get() ?? collect())->keyBy('key')
+        $sets = ($this->tenantSettings()->get() ?? collect())->keyBy('key')
             ->map(fn($s) => $s->typed_value);
         
         return [
