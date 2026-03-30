@@ -40,6 +40,7 @@ export default function ElectionPage() {
   const [history, setHistory] = useState<Election[]>([])
   const [loading, setLoading] = useState(true)
   const [voting, setVoting] = useState(false)
+  const [initiating, setInitiating] = useState(false)
 
   const isDirector = user?.roles?.includes('director')
 
@@ -59,7 +60,11 @@ export default function ElectionPage() {
       setEligibleCandidates(currentRes.data.eligible_candidates)
       setHistory(historyRes.data)
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to fetch data')
+      if (!window.navigator.onLine) {
+        toast.error('You are offline. Showing cached results if available.')
+      } else {
+        toast.error(error.response?.data?.message || 'Failed to fetch data')
+      }
     } finally {
       setLoading(false)
     }
@@ -67,19 +72,34 @@ export default function ElectionPage() {
 
   const handleInitiate = async () => {
     try {
-      await electionsApi.initiate()
-      toast.success('Election initiated successfully')
+      setInitiating(true)
+      const response = await electionsApi.initiate()
+      
+      if (response.status === 202) {
+        toast.success('Election initiation queued (offline)')
+      } else {
+        toast.success('Election initiated successfully')
+      }
+      
       fetchData()
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to initiate election')
+    } finally {
+      setInitiating(false)
     }
   }
 
   const handleVote = async (candidateId: number) => {
     try {
       setVoting(true)
-      await electionsApi.vote(candidateId)
-      toast.success('Vote cast successfully')
+      const response = await electionsApi.vote(candidateId)
+      
+      if (response.status === 202) {
+        toast.success('Vote queued (offline)')
+      } else {
+        toast.success('Vote cast successfully')
+      }
+      
       fetchData()
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to cast vote')
@@ -111,10 +131,15 @@ export default function ElectionPage() {
         {!currentElection && isDirector && (
           <button
             onClick={handleInitiate}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+            disabled={initiating}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors flex items-center gap-2"
           >
-            <TrendingUp size={18} />
-            Initiate New Election
+            {initiating ? (
+              <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            ) : (
+              <TrendingUp size={18} />
+            )}
+            {initiating ? 'Initiating...' : 'Initiate New Election'}
           </button>
         )}
       </div>
@@ -183,7 +208,7 @@ export default function ElectionPage() {
                         key={candidate.id}
                         disabled={voting}
                         onClick={() => handleVote(candidate.id)}
-                        className="flex items-center gap-3 p-3 rounded-xl border border-slate-700 hover:border-blue-500 bg-slate-800/30 hover:bg-blue-900/10 transition-all text-left group"
+                        className="flex items-center gap-3 p-3 rounded-xl border border-slate-700 hover:border-blue-500 bg-slate-800/30 hover:bg-blue-900/10 disabled:opacity-70 disabled:cursor-not-allowed transition-all text-left group"
                       >
                         <img src={candidate.avatar_url} alt="" className="h-10 w-10 rounded-full" />
                         <div className="flex-1">
@@ -191,7 +216,11 @@ export default function ElectionPage() {
                           <p className="text-xs text-slate-400">{candidate.email}</p>
                         </div>
                         <div className="h-6 w-6 rounded-full border border-slate-600 group-hover:border-blue-500 flex items-center justify-center">
-                          <div className="h-3 w-3 rounded-full bg-blue-500 scale-0 group-hover:scale-100 transition-transform" />
+                          {voting ? (
+                             <div className="h-3 w-3 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
+                          ) : (
+                            <div className="h-3 w-3 rounded-full bg-blue-500 scale-0 group-hover:scale-100 transition-transform" />
+                          )}
                         </div>
                       </button>
                     ))}
@@ -246,9 +275,11 @@ export default function ElectionPage() {
           {isDirector && (
             <button
               onClick={handleInitiate}
-              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-all transform hover:scale-105"
+              disabled={initiating}
+              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-bold transition-all transform hover:scale-105 flex items-center gap-2 mx-auto"
             >
-              Start Election Process
+              {initiating && <div className="h-5 w-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+              {initiating ? 'Processing...' : 'Start Election Process'}
             </button>
           )}
         </div>

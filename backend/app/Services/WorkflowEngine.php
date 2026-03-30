@@ -8,7 +8,9 @@ use App\Models\ApprovalWorkflow;
 use App\Models\Transaction;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use App\Models\User;
+use Spatie\Permission\Models\Role;
 
 class WorkflowEngine
 {
@@ -73,8 +75,34 @@ class WorkflowEngine
         }
 
         // Verify user has the required role
-        if (!$user->hasRole($step->role_name)) {
-            throw new \Illuminate\Auth\Access\AuthorizationException("You do not have the required role ({$step->role_name}) for this step.");
+        $roleName = $step->role_name;
+        // Normalize role name: if 'admin' but not in DB, assume 'tenant-admin'
+        if ($roleName === 'admin' && !Role::where('name', 'admin')->where('guard_name', 'web')->exists()) {
+            $roleName = 'tenant-admin';
+        }
+
+        if (!$user->hasRole($roleName)) {
+            throw new \Illuminate\Auth\Access\AuthorizationException("You do not have the required role ({$roleName}) for this step.");
+        }
+
+        // --- Segregation of Duties ---
+
+        // 1. No Self-Approval: The requester cannot approve their own submission
+        $creatorId = $approval->approvable->created_by ?? null;
+        $allowSelfApproval = $this->settings->get('approvals.allow_self_approval', false, $approval->tenant_id);
+
+        if (!$allowSelfApproval && $creatorId && $user->id === (int)$creatorId) {
+            throw new \Illuminate\Auth\Access\AuthorizationException("You cannot approve your own request.");
+        }
+
+        // 2. One Person per Workflow: A user can only act on one step
+        $alreadyActed = ApprovalLog::where('approval_id', $approval->id)
+            ->where('user_id', $user->id)
+            ->whereIn('action', ['approved', 'rejected'])
+            ->exists();
+
+        if ($alreadyActed) {
+            throw new \Illuminate\Auth\Access\AuthorizationException("You have already acted on a previous step of this approval workflow.");
         }
 
         return DB::transaction(function () use ($approval, $action, $comment, $step, $user) {
@@ -117,8 +145,25 @@ class WorkflowEngine
         $step = $approval->currentStep();
         if (!$step) return;
 
-        $usersToNotify = User::forTenant($approval->tenant_id)->role($step->role_name)->get();
-        if ($usersToNotify->isEmpty()) return;
+        $roleName = $step->role_name;
+
+        // Try getting role, with some robustness
+        try {
+            $usersToNotify = User::forTenant($approval->tenant_id)->role($roleName)->get();
+        } catch (\Spatie\Permission\Exceptions\RoleDoesNotExist $e) {
+            if ($roleName === 'admin') {
+                $roleName = 'tenant-admin';
+                $usersToNotify = User::forTenant($approval->tenant_id)->role($roleName)->get();
+            } else {
+                Log::warning("Workflow step required role '{$roleName}' which does not exist.");
+                return;
+            }
+        }
+
+        if ($usersToNotify->isEmpty()) {
+            Log::info("No users found with role '{$roleName}' for tenant {$approval->tenant_id} to notify.");
+            return;
+        }
 
         $type = class_basename($approval->approvable_type);
 

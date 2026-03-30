@@ -70,8 +70,17 @@ export default function ApprovalsPage() {
             const description = approvable?.description
             const txType = approvable?.type
             const txDate = approvable?.transaction_date
-            const requester = (approvable?.created_by_user ?? approvable?.createdBy) as Record<string, any> | undefined
-            const requesterName = requester?.name ?? `User #${approvable?.created_by ?? '?'}`
+            
+            // Robust requester name extraction
+            const requesterData = approvable?.created_by_user ?? approvable?.createdBy ?? approvable?.created_by
+            let requesterName = 'Unknown User'
+            
+            if (typeof requesterData === 'object' && requesterData !== null) {
+              requesterName = requesterData.name || `User #${requesterData.id || '?'}`
+            } else if (requesterData) {
+              requesterName = `User #${requesterData}`
+            }
+            
             const steps = approval.workflow?.steps ?? []
             const currentStepInfo = steps.find((s: any) => s.step_order === approval.current_step)
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { settingsApi } from '../../services/api'
 import { useSettingsStore, useAuthStore } from '../../store'
-import { Settings, Save, Loader2, Palette, ToggleLeft, ToggleRight, Upload, DollarSign, Bell, FileText, MapPin, Phone, Mail, Globe, Hash, Briefcase, UserCircle, CreditCard } from 'lucide-react'
+import { Settings, Save, Loader2, Palette, ToggleLeft, ToggleRight, Upload, DollarSign, Bell, FileText, MapPin, Phone, Mail, Globe, Hash, Briefcase, UserCircle, CreditCard, GitBranch } from 'lucide-react'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
 import SystemSettingsPage from './SystemSettingsPage'
@@ -203,6 +203,30 @@ export default function SettingsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left Column: Visuals & Modules */}
         <div className="space-y-6">
+          <div className="glass-card p-6">
+            <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+              <GitBranch size={18} className="text-orange-400" /> Workflow Policies
+            </h2>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between p-3 rounded-lg bg-slate-800/30 border border-slate-700/50 hover:bg-slate-800/50 transition-colors">
+                <div>
+                  <p className="text-slate-200 font-medium text-sm">Allow Self-Approval</p>
+                  <p className="text-slate-500 text-[10px]">Permit users to approve their own transactions</p>
+                </div>
+                <button onClick={async () => {
+                  try {
+                    const current = settings['approvals.allow_self_approval'] === 'true'
+                    await settingsApi.set('approvals.allow_self_approval', !current, 'approvals', 'boolean')
+                    const res = await settingsApi.all(); setSettings(res.data); toast.success('Policy updated')
+                  } catch { toast.error('Failed to update policy') }
+                }}
+                  className={clsx('transition-colors', settings['approvals.allow_self_approval'] === 'true' ? 'text-blue-400' : 'text-slate-600')}>
+                  {settings['approvals.allow_self_approval'] === 'true' ? <ToggleRight size={28} /> : <ToggleLeft size={28} />}
+                </button>
+              </div>
+            </div>
+          </div>
+
           <div className="glass-card p-6">
             <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
               <Palette size={18} className="text-purple-400" /> Visual Identity

@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
 import { workflowsApi } from '../../services/api'
 import type { ApprovalWorkflow } from '../../types'
-import { GitBranch, Plus, Trash2, Loader2, ArrowRight, Settings } from 'lucide-react'
+import { GitBranch, Plus, Trash2, Loader2, ArrowRight, Settings as SettingsIcon, ToggleLeft, ToggleRight } from 'lucide-react'
 import clsx from 'clsx'
 import toast from 'react-hot-toast'
 import Modal from '../../components/Modal'
 import { useForm } from 'react-hook-form'
+import { useSettingsStore } from '../../store'
+import { settingsApi } from '../../services/api'
 
 export default function WorkflowsPage() {
   const [workflows, setWorkflows] = useState<ApprovalWorkflow[]>([])
@@ -14,6 +16,7 @@ export default function WorkflowsPage() {
   const [isSubmittingForm, setIsSubmittingForm] = useState(false)
   const [selectedWorkflow, setSelectedWorkflow] = useState<ApprovalWorkflow | null>(null)
   const [steps, setSteps] = useState<any[]>([{ step_order: 1, role_name: 'director' }])
+  const { settings, setSettings } = useSettingsStore()
 
   const { register, handleSubmit: handleFormSubmit, reset, setValue } = useForm<{
     name: string; module: string;
@@ -49,7 +52,7 @@ export default function WorkflowsPage() {
   }
 
   const handleAddStep = () => {
-    setSteps([...steps, { step_order: steps.length + 1, role_name: 'admin' }])
+    setSteps([...steps, { step_order: steps.length + 1, role_name: 'director' }])
   }
 
   const handleRemoveStep = (index: number) => {
@@ -110,14 +113,41 @@ export default function WorkflowsPage() {
   }
 
   return (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between">
+    <div className="space-y-5 text-slate-200">
+      <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold text-white">Approval Workflows</h1>
-          <p className="text-slate-400 text-sm">Configure multi-level approval rules</p>
+          <h1 className="text-2xl font-bold text-white uppercase tracking-tight tracking-tighter">Approval Workflows</h1>
+          <p className="text-slate-400 text-sm italic">Define and manage multi-level approval processes</p>
         </div>
-        <button onClick={() => handleOpenForm()} className="btn-primary">
-          <Plus size={16} /> New Workflow
+
+        {/* Policy Toggle Bar */}
+        <div className="bg-slate-800/40 border border-slate-700/50 rounded-xl px-4 py-2 flex items-center gap-4 animate-fade-in shadow-lg">
+          <div className="flex items-center gap-3">
+             <div className="p-1.5 bg-orange-500/10 rounded-lg text-orange-400">
+                <GitBranch size={16} />
+             </div>
+             <div>
+                <p className="text-[11px] font-bold text-slate-200 uppercase leading-none">Self-Approval Mode</p>
+                <p className="text-[10px] text-slate-500 mt-1">Permit users to approve their own requests</p>
+             </div>
+          </div>
+          <button 
+            onClick={async () => {
+              try {
+                const current = settings['approvals.allow_self_approval'] === 'true'
+                await settingsApi.set('approvals.allow_self_approval', !current, 'approvals', 'boolean')
+                const res = await settingsApi.all(); setSettings(res.data); toast.success('Policy updated')
+              } catch { toast.error('Failed to update policy') }
+            }}
+            className={clsx('transition-all duration-300 transform active:scale-95', settings['approvals.allow_self_approval'] === 'true' ? 'text-blue-400' : 'text-slate-600')}
+            title={settings['approvals.allow_self_approval'] === 'true' ? 'Self-approval is ON' : 'Self-approval is OFF'}
+          >
+            {settings['approvals.allow_self_approval'] === 'true' ? <ToggleRight size={32} /> : <ToggleLeft size={32} />}
+          </button>
+        </div>
+
+        <button onClick={() => handleOpenForm()} className="btn-primary hover:scale-105 transition-transform">
+          <Plus size={18} /> New Workflow
         </button>
       </div>
 
@@ -155,7 +185,7 @@ export default function WorkflowsPage() {
                     className="p-1.5 text-slate-400 hover:text-blue-400 hover:bg-blue-400/10 rounded transition-all"
                     title="Edit Workflow"
                   >
-                    <Settings size={16} />
+                    <SettingsIcon size={16} />
                   </button>
                   <button 
                     onClick={() => handleDelete(wf.id)}
@@ -215,17 +245,18 @@ export default function WorkflowsPage() {
                        {step.step_order}
                     </div>
                     <div className="flex-1">
-                       <select
-                         value={step.role_name}
-                         onChange={(e) => handleStepChange(idx, 'role_name', e.target.value)}
-                         className="fmis-select !py-1.5"
-                         required
-                       >
-                         <option value="director">Director</option>
-                         <option value="manager">Manager</option>
-                         <option value="staff">Staff</option>
-                         <option value="super-admin">Super Admin</option>
-                       </select>
+                        <select
+                          value={step.role_name}
+                          onChange={(e) => handleStepChange(idx, 'role_name', e.target.value)}
+                          className="fmis-select !py-1.5"
+                          required
+                        >
+                          <option value="staff">Staff</option>
+                          <option value="manager">Manager</option>
+                          <option value="director">Director</option>
+                          <option value="tenant-admin">Tenant Admin</option>
+                          <option value="super-admin">Super Admin</option>
+                        </select>
                     </div>
                     {steps.length > 1 && (
                       <button type="button" onClick={() => handleRemoveStep(idx)} className="p-1.5 text-rose-400 hover:bg-rose-400/10 rounded-md transition-colors">

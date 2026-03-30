@@ -40,16 +40,20 @@ class ElectionService
             ]);
 
             // Notify all directors
-            $directors = User::forTenant($initiator->tenant_id)->role('director')->get();
-            if ($directors->isNotEmpty()) {
-                $this->notifications->send(
-                    users: $directors,
-                    title: 'New Election Initiated',
-                    content: "A new election for administrative capability has been started by {$initiator->name}. Please cast your vote.",
-                    featureKey: 'elections',
-                    action: ['label' => 'Go to Election', 'url' => "/elections"],
-                    type: 'warning'
-                );
+            try {
+                $directors = User::forTenant($initiator->tenant_id)->role('director')->get();
+                if ($directors->isNotEmpty()) {
+                    $this->notifications->send(
+                        users: $directors,
+                        title: 'New Election Initiated',
+                        content: "A new election for administrative capability has been started by {$initiator->name}. Please cast your vote.",
+                        featureKey: 'elections',
+                        action: ['label' => 'Go to Election', 'url' => "/elections"],
+                        type: 'warning'
+                    );
+                }
+            } catch (\Exception $e) {
+                \Log::error('Election notification failed: ' . $e->getMessage());
             }
 
             return $election;
@@ -83,16 +87,22 @@ class ElectionService
             throw new \Exception('The candidate must belong to the same tenant.');
         }
 
-        $vote = Vote::create([
-            'election_id'  => $election->id,
-            'voter_id'     => $voter->id,
-            'candidate_id' => $candidate->id,
-        ]);
+        if (Vote::where('election_id', $election->id)->where('voter_id', $voter->id)->exists()) {
+            throw new \Exception('You have already cast your vote in this election.');
+        }
 
-        // Check if everyone has voted
-        $this->checkAndConclude($election);
+        return DB::transaction(function () use ($election, $voter, $candidate) {
+            $vote = Vote::create([
+                'election_id'  => $election->id,
+                'voter_id'     => $voter->id,
+                'candidate_id' => $candidate->id,
+            ]);
 
-        return $vote;
+            // Check if everyone has voted
+            $this->checkAndConclude($election);
+
+            return $vote;
+        });
     }
 
     /**
@@ -150,16 +160,20 @@ class ElectionService
             $winnerUser->assignRole($adminRole);
 
             // Notify directors of results
-            $directors = User::forTenant($election->tenant_id)->role('director')->get();
-            if ($directors->isNotEmpty()) {
-                $this->notifications->send(
-                    users: $directors,
-                    title: 'Election Concluded',
-                    content: "The election has ended. {$winnerUser->name} has been elected as the new Tenant Admin.",
-                    featureKey: 'elections',
-                    action: ['label' => 'View Results', 'url' => "/elections"],
-                    type: 'success'
-                );
+            try {
+                $directors = User::forTenant($election->tenant_id)->role('director')->get();
+                if ($directors->isNotEmpty()) {
+                    $this->notifications->send(
+                        users: $directors,
+                        title: 'Election Concluded',
+                        content: "The election has ended. {$winnerUser->name} has been elected as the new Tenant Admin.",
+                        featureKey: 'elections',
+                        action: ['label' => 'View Results', 'url' => "/elections"],
+                        type: 'success'
+                    );
+                }
+            } catch (\Exception $e) {
+                \Log::error('Election conclusion notification failed: ' . $e->getMessage());
             }
         });
     }

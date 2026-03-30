@@ -49,6 +49,10 @@ class WorkflowController extends Controller
         ]);
 
         foreach ($data['steps'] as $step) {
+            // Map common alias
+            if ($step['role_name'] === 'admin') {
+                $step['role_name'] = 'tenant-admin';
+            }
             ApprovalStep::create(['workflow_id' => $workflow->id, ...$step]);
         }
 
@@ -86,6 +90,10 @@ class WorkflowController extends Controller
         if (isset($data['steps'])) {
             $workflow->steps()->delete();
             foreach ($data['steps'] as $step) {
+                // Map common alias
+                if ($step['role_name'] === 'admin') {
+                    $step['role_name'] = 'tenant-admin';
+                }
                 ApprovalStep::create(['workflow_id' => $workflow->id, ...$step]);
             }
         }
@@ -94,10 +102,10 @@ class WorkflowController extends Controller
         return response()->json($workflow->fresh('steps'));
     }
 
-    public function destroy(Request $request, ApprovalWorkflow $approvalWorkflow): JsonResponse
+    public function destroy(Request $request, ApprovalWorkflow $workflow): JsonResponse
     {
-        abort_if($approvalWorkflow->tenant_id !== $request->user()->tenant_id, 403);
-        $approvalWorkflow->delete();
+        abort_if($workflow->tenant_id !== $request->user()->tenant_id, 403);
+        $workflow->delete();
         return response()->json(['message' => 'Workflow deleted.']);
     }
 }
