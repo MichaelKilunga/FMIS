@@ -4,6 +4,7 @@ import { analyticsApi } from '../../services/api'
 import { systemAdminService, type SystemStats, type SystemHealth } from '../../services/systemAdminService'
 import type { AnalyticsSummary, CashFlowDataPoint } from '../../types'
 import { useSettingsStore, useAuthStore } from '../../store'
+import { useCurrency } from '../../hooks/useCurrency'
 import { 
   TrendingUp, TrendingDown, Clock, AlertTriangle, PieChart, CheckCircle, 
   Loader2, Plus, FileText, Users, Activity, Sparkles, Building, ArrowRight,
@@ -68,7 +69,7 @@ function QuickAction({ icon: Icon, label, to, colorClass }: { icon: React.Elemen
 export default function DashboardPage() {
   const { user } = useAuthStore()
   const { isModuleEnabled, settings } = useSettingsStore()
-  const defaultCurrency = (settings['currency.default'] as string) || 'USD'
+  const { formatCurrency } = useCurrency()
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null)
   const [cashFlow, setCashFlow] = useState<CashFlowDataPoint[]>([])
   const [systemStats, setSystemStats] = useState<SystemStats | null>(null)
@@ -132,14 +133,7 @@ export default function DashboardPage() {
     </div>
   )
 
-  const fmt = (n: any) => {
-    if (n === null || n === undefined) return '--'
-    const symbol = (settings['currency.symbol'] as string) || ''
-    if (symbol) {
-      return `${symbol} ${new Intl.NumberFormat('en-US', { minimumFractionDigits: 1, notation: 'compact', maximumFractionDigits: 1 }).format(n)}`
-    }
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: defaultCurrency, notation: 'compact', maximumFractionDigits: 1 }).format(n)
-  }
+  const fmt = (n: any) => formatCurrency(n, undefined, true)
 
   return (
     <div className="space-y-8 animate-fade-in max-w-7xl mx-auto">

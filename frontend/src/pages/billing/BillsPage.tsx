@@ -11,8 +11,10 @@ import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 import clsx from 'clsx';
 import BillModal from '../../components/billing/BillModal';
+import { useCurrency } from '../../hooks/useCurrency';
 
 export default function BillsPage() {
+  const { formatCurrency } = useCurrency();
   const [data, setData] = useState<PaginatedResponse<RecurringBill> | null>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -140,9 +142,10 @@ export default function BillsPage() {
           <div>
             <p className="text-sm text-slate-400">Monthly Est. Income</p>
             <p className="text-xl font-bold text-emerald-400">
-              {/* This would need real calculation, but let's show a placeholder or basic sum */}
-              {data?.data.filter(b => b.type === 'income' && b.status === 'active')
-                .reduce((acc, b) => acc + Number(b.amount), 0).toLocaleString()} TZS
+              {formatCurrency(
+                data?.data.filter(b => b.type === 'income' && b.status === 'active')
+                  .reduce((acc, b) => acc + Number(b.amount), 0) || 0
+              )}
             </p>
           </div>
         </div>
@@ -153,8 +156,10 @@ export default function BillsPage() {
           <div>
             <p className="text-sm text-slate-400">Monthly Est. Expenses</p>
             <p className="text-xl font-bold text-rose-400">
-              {data?.data.filter(b => b.type === 'expense' && b.status === 'active')
-                .reduce((acc, b) => acc + Number(b.amount), 0).toLocaleString()} TZS
+              {formatCurrency(
+                data?.data.filter(b => b.type === 'expense' && b.status === 'active')
+                  .reduce((acc, b) => acc + Number(b.amount), 0) || 0
+              )}
             </p>
           </div>
         </div>
@@ -222,7 +227,7 @@ export default function BillsPage() {
                   </td>
                   <td>
                     <span className={clsx("font-semibold", bill.type === 'income' ? 'text-emerald-400' : 'text-rose-400')}>
-                      {new Intl.NumberFormat('en-US', { style: 'currency', currency: bill.currency }).format(bill.amount)}
+                      {formatCurrency(bill.amount, bill.currency)}
                     </span>
                   </td>
                   <td className="capitalize text-slate-300 transform scale-90 origin-left">

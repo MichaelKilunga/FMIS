@@ -6,8 +6,10 @@ import toast from 'react-hot-toast'
 import { format } from 'date-fns'
 import clsx from 'clsx'
 import Pagination from '../../components/Pagination'
+import { useCurrency } from '../../hooks/useCurrency'
 
 export default function ApprovalsPage() {
+  const { formatCurrency } = useCurrency()
   const [data, setData] = useState<PaginatedResponse<Approval> | null>(null)
   const [loading, setLoading] = useState(true)
   const [commenting, setCommenting] = useState<{ id: number; action: 'approve' | 'reject' } | null>(null)
@@ -42,7 +44,7 @@ export default function ApprovalsPage() {
   }
 
   const fmt = (n: number, currency?: string) =>
-    new Intl.NumberFormat('en-US', { style: 'currency', currency: currency || 'USD' }).format(n)
+    formatCurrency(n, currency)
 
   return (
     <div className="space-y-5">

@@ -9,6 +9,7 @@ import type {
   FinancialHealth 
 } from '../../types'
 import { useSettingsStore, useAuthStore } from '../../store'
+import { useCurrency } from '../../hooks/useCurrency'
 import { 
   TrendingUp, TrendingDown, Clock, AlertTriangle, PieChart, CheckCircle, 
   Loader2, Activity, Sparkles, Brain, Target, BarChart3, LineChart,
@@ -23,7 +24,7 @@ import clsx from 'clsx'
 export default function AnalyticsPage() {
   const { user } = useAuthStore()
   const { settings } = useSettingsStore()
-  const defaultCurrency = (settings['currency.default'] as string) || 'USD'
+  const { formatCurrency } = useCurrency()
   
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null)
   const [productivity, setProductivity] = useState<ProductivityStats | null>(null)
@@ -101,12 +102,7 @@ export default function AnalyticsPage() {
 
   const isLoadingAny = Object.values(loadingStates).some(v => v)
 
-  const fmt = (n: any) => {
-    if (n === null || n === undefined) return '--'
-    return new Intl.NumberFormat('en-US', { 
-      style: 'currency', currency: defaultCurrency, notation: 'compact', maximumFractionDigits: 1 
-    }).format(n)
-  }
+  const fmt = (n: any) => formatCurrency(n, undefined, true)
 
   const COLORS = ['#10B981', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6']
 

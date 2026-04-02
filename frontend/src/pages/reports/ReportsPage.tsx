@@ -4,6 +4,7 @@ import { reportsApi, categoriesApi } from '../../services/api'
 import { toast } from 'react-hot-toast'
 import { useEffect } from 'react'
 import Modal from '../../components/Modal'
+import { useCurrency } from '../../hooks/useCurrency'
 
 interface ReportConfig {
   title: string;
@@ -19,6 +20,7 @@ interface ReportConfig {
 export default function ReportsPage() {
   const [fromDate, setFromDate] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0])
   const [toDate, setToDate] = useState(new Date().toISOString().split('T')[0])
+  const { formatCurrency } = useCurrency()
   const [type, setType] = useState('all')
   const [status, setStatus] = useState('')
   const [categoryId, setCategoryId] = useState('')
@@ -287,7 +289,7 @@ export default function ReportsPage() {
                       </span>
                     </td>
                     <td className="px-6 py-4 font-semibold text-white">
-                      {new Intl.NumberFormat('en-US', { style: 'currency', currency: t.currency || 'USD' }).format(t.amount)}
+                      {formatCurrency(t.amount, t.currency)}
                     </td>
                     <td className="px-6 py-4">
                       <span className="text-slate-400">{t.status}</span>

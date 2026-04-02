@@ -9,9 +9,11 @@ import DataTable from '../components/DataTable'
 import DebtModal from '../components/debts/DebtModal'
 import DebtPaymentModal from '../components/debts/DebtPaymentModal'
 import { useAuthStore } from '../store'
+import { useCurrency } from '../hooks/useCurrency'
 
 export default function DebtsPage() {
   const { user } = useAuthStore()
+  const { formatCurrency } = useCurrency()
   const [data, setData] = useState<PaginatedResponse<Debt> | null>(null)
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -99,9 +101,9 @@ export default function DebtsPage() {
       accessor: (debt: Debt) => (
         <div>
           <span className="font-semibold text-slate-200">
-            {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'TZS' }).format(Number(debt.total_amount))}
+            {formatCurrency(debt.total_amount)}
           </span>
-          <p className="text-[10px] text-slate-500">Remaining: {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'TZS' }).format(Number(debt.remaining_amount))}</p>
+          <p className="text-[10px] text-slate-500">Remaining: {formatCurrency(debt.remaining_amount)}</p>
         </div>
       )
     },
@@ -198,7 +200,7 @@ export default function DebtsPage() {
           <div>
             <p className="text-xs text-slate-400 font-medium">Total Payable</p>
             <p className="text-xl font-bold text-white">
-              {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'TZS' }).format(
+              {formatCurrency(
                 data?.data.filter(d => d.type === 'payable').reduce((acc, d) => acc + Number(d.remaining_amount), 0) || 0
               )}
             </p>
@@ -211,7 +213,7 @@ export default function DebtsPage() {
           <div>
             <p className="text-xs text-slate-400 font-medium">Total Receivable</p>
             <p className="text-xl font-bold text-white">
-              {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'TZS' }).format(
+              {formatCurrency(
                 data?.data.filter(d => d.type === 'receivable').reduce((acc, d) => acc + Number(d.remaining_amount), 0) || 0
               )}
             </p>

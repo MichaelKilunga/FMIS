@@ -7,6 +7,7 @@ import toast from 'react-hot-toast'
 import Modal from '../../components/Modal'
 import { useForm } from 'react-hook-form'
 import DataTable from '../../components/DataTable'
+import { useCurrency } from '../../hooks/useCurrency'
 
 const typeIcons: Record<string, any> = {
   bank: Building2,
@@ -36,6 +37,7 @@ interface AccountFormData {
 
 export default function AccountsPage() {
   const [accounts, setAccounts] = useState<Account[]>([])
+  const { formatCurrency, defaultCurrency } = useCurrency()
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [editingAccount, setEditingAccount] = useState<Account | null>(null)
@@ -44,7 +46,7 @@ export default function AccountsPage() {
   const { register, handleSubmit, reset, setValue } = useForm<AccountFormData>({
     defaultValues: {
       type: 'bank',
-      currency: 'TZS',
+      currency: defaultCurrency,
       is_active: true,
       balance: 0,
       allowed_transaction_types: ['income', 'expense', 'transfer']
@@ -94,7 +96,7 @@ export default function AccountsPage() {
     setEditingAccount(null)
     reset({
       type: 'bank',
-      currency: 'TZS',
+      currency: defaultCurrency,
       is_active: true,
       balance: 0,
       allowed_transaction_types: ['income', 'expense', 'transfer']
@@ -185,7 +187,7 @@ export default function AccountsPage() {
       accessor: (acc: Account) => (
         <div className="text-right">
           <p className="font-bold text-slate-100">
-            {new Intl.NumberFormat('en-US', { style: 'currency', currency: acc.currency }).format(acc.balance)}
+            {formatCurrency(acc.balance, acc.currency)}
           </p>
         </div>
       ),

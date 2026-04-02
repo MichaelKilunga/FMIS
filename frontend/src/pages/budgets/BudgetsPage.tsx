@@ -7,6 +7,7 @@ import toast from 'react-hot-toast'
 import Modal from '../../components/Modal'
 import { useForm, type UseFormReturn } from 'react-hook-form'
 import { useSettingsStore, useAuthStore } from '../../store'
+import { useCurrency } from '../../hooks/useCurrency'
 
 import Pagination from '../../components/Pagination'
 
@@ -19,7 +20,7 @@ type BudgetFormData = {
 export default function BudgetsPage() {
   const { user } = useAuthStore()
   const { settings } = useSettingsStore()
-  const defaultCurrency = (settings['currency.default'] as string) || 'USD'
+  const { formatCurrency } = useCurrency()
 
   const [data, setData] = useState<PaginatedResponse<Budget> | null>(null)
   const [categories, setCategories] = useState<TransactionCategory[]>([])
@@ -137,15 +138,7 @@ export default function BudgetsPage() {
     }
   }
 
-  const fmt = (n: number | null | undefined) => {
-    if (n === null || n === undefined || isNaN(Number(n))) return '--'
-    const num = Number(n)
-    const symbol = (settings['currency.symbol'] as string) || ''
-    if (symbol) {
-      return `${symbol} ${new Intl.NumberFormat('en-US', { minimumFractionDigits: 1, notation: 'compact', maximumFractionDigits: 1 }).format(num)}`
-    }
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: defaultCurrency, notation: 'compact', maximumFractionDigits: 1 }).format(num)
-  }
+  const fmt = (n: number | null | undefined) => formatCurrency(n, undefined, true)
 
   const budgetFormFields = (form: UseFormReturn<BudgetFormData>) => (
     <>

@@ -1,7 +1,7 @@
 import { useForm } from 'react-hook-form'
 import { useEffect, useState } from 'react'
 import { debtsApi, accountsApi } from '../../services/api'
-import { useSettingsStore } from '../../store'
+import { useCurrency } from '../../hooks/useCurrency'
 import type { Debt } from '../../types/debt'
 import Modal from '../Modal'
 import toast from 'react-hot-toast'
@@ -19,6 +19,7 @@ export default function DebtPaymentModal({
 }: {
   isOpen: boolean; onClose: () => void; onSuccess: () => void; debt: Debt | null;
 }) {
+  const { formatCurrency } = useCurrency()
   const [loading, setLoading] = useState(false)
   const [accounts, setAccounts] = useState<any[]>([])
   
@@ -69,13 +70,7 @@ export default function DebtPaymentModal({
         <div className="bg-slate-800/50 p-3 rounded-lg border border-slate-700/50 mb-4">
           <p className="text-xs text-slate-400">Remaining Balance</p>
           <p className="text-xl font-bold text-white">
-            {(() => {
-              const symbol = (useSettingsStore.getState().settings['currency.symbol'] as string) || ''
-              if (symbol) {
-                return `${symbol} ${new Intl.NumberFormat('en-US', { minimumFractionDigits: 2 }).format(Number(debt.remaining_amount))}`
-              }
-              return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'TZS' }).format(Number(debt.remaining_amount))
-            })()}
+            {formatCurrency(Number(debt.remaining_amount))}
           </p>
         </div>
 

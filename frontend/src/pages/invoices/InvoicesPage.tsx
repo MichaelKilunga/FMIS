@@ -7,6 +7,7 @@ import toast from 'react-hot-toast'
 import Modal from '../../components/Modal'
 import { useForm, useFieldArray } from 'react-hook-form'
 import { useSettingsStore, useAuthStore } from '../../store'
+import { useCurrency } from '../../hooks/useCurrency'
 import DataTable from '../../components/DataTable'
 
 const statusBadge: Record<string, string> = {
@@ -40,10 +41,10 @@ interface InvoiceFormData {
 export default function InvoicesPage() {
   const { user, tenant } = useAuthStore()
   const { settings } = useSettingsStore()
+  const { formatCurrency, defaultCurrency } = useCurrency()
 
   const [clients, setClients] = useState<Client[]>([])
   
-  const defaultCurrency = (settings['currency.default'] as string) || 'TZS'
   const multiEnabled = settings['currency.multi_enabled'] === 'true'
   const manualRatesStr = (settings['currency.manual_rates'] as string) || '{}'
 
@@ -193,18 +194,8 @@ export default function InvoicesPage() {
     }
   }
 
-  const fmt = (n: number | null | undefined, cur = 'TZS') => {
-    if (n === null || n === undefined || isNaN(Number(n))) return '—'
-    n = Number(n)
-    const symbol = (settings['currency.symbol'] as string) || ''
-    if (symbol) {
-      return `${symbol} ${new Intl.NumberFormat('en-US', { minimumFractionDigits: 2 }).format(n)}`
-    }
-    try {
-      return new Intl.NumberFormat('en-US', { style: 'currency', currency: cur }).format(n)
-    } catch {
-      return `${cur} ${n.toLocaleString()}`
-    }
+  const fmt = (n: number | null | undefined, cur = defaultCurrency) => {
+    return formatCurrency(n, cur)
   }
 
   const columns = [
@@ -421,20 +412,20 @@ export default function InvoicesPage() {
           {/* Live Totals Preview */}
           <div className="bg-slate-800/50 rounded-lg p-3 space-y-1 text-sm">
             <div className="flex justify-between text-slate-400">
-              <span>Subtotal</span><span>{watchedCurrency} {subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+              <span>Subtotal</span><span>{formatCurrency(subtotal, watchedCurrency)}</span>
             </div>
             {Number(watchedDiscount) > 0 && (
               <div className="flex justify-between text-slate-400">
-                <span>Discount</span><span>- {watchedCurrency} {Number(watchedDiscount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                <span>Discount</span><span>- {formatCurrency(Number(watchedDiscount), watchedCurrency)}</span>
               </div>
             )}
             {Number(watchedTaxRate) > 0 && (
               <div className="flex justify-between text-slate-400">
-                <span>Tax ({watchedTaxRate}%)</span><span>{watchedCurrency} {taxAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                <span>Tax ({watchedTaxRate}%)</span><span>{formatCurrency(taxAmount, watchedCurrency)}</span>
               </div>
             )}
             <div className="flex justify-between font-bold text-white border-t border-slate-600 pt-2 mt-1">
-              <span>Total</span><span>{watchedCurrency} {total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+              <span>Total</span><span>{formatCurrency(total, watchedCurrency)}</span>
             </div>
           </div>
 

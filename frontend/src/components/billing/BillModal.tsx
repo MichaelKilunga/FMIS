@@ -3,6 +3,7 @@ import { Loader2, Calendar, Tag, Wallet, Hash } from 'lucide-react';
 import type { CreateBillData, RecurringBill } from '../../types/bill';
 import type { TransactionCategory, Account } from '../../types';
 import Modal from '../Modal';
+import { useCurrency } from '../../hooks/useCurrency';
 
 interface BillModalProps {
   isOpen: boolean;
@@ -23,6 +24,7 @@ export default function BillModal({
   accounts,
   isSubmitting
 }: BillModalProps) {
+  const { defaultCurrency } = useCurrency();
   const { register, handleSubmit, formState: { errors }, reset } = useForm<CreateBillData>({
     defaultValues: initialData ? {
       description: initialData.description,
@@ -40,7 +42,7 @@ export default function BillModal({
       frequency: 'monthly',
       start_date: new Date().toISOString().substring(0, 10),
       next_due_date: new Date().toISOString().substring(0, 10),
-      currency: 'TZS',
+      currency: defaultCurrency,
     }
   });
 

@@ -6,6 +6,7 @@ import toast from 'react-hot-toast'
 import { format } from 'date-fns'
 import clsx from 'clsx'
 import { useOnlineStore, useSettingsStore } from '../../store'
+import { useCurrency } from '../../hooks/useCurrency'
 import Modal from '../../components/Modal'
 import { useForm, type UseFormReturn } from 'react-hook-form'
 import DataTable from '../../components/DataTable'
@@ -24,8 +25,7 @@ type TxFormData = {
 export default function TransactionsPage() {
   const { isOnline } = useOnlineStore()
   const { settings } = useSettingsStore()
-
-  const defaultCurrency = (settings['currency.default'] as string) || 'USD'
+  const { formatCurrency, defaultCurrency } = useCurrency()
   const multiEnabled = settings['currency.multi_enabled'] === 'true'
   const manualRatesStr = (settings['currency.manual_rates'] as string) || '{}'
 
@@ -171,11 +171,7 @@ export default function TransactionsPage() {
   }
 
   const fmt = (n: number, currency?: string) => {
-    const symbol = (settings['currency.symbol'] as string) || ''
-    if (symbol) {
-      return `${symbol} ${new Intl.NumberFormat('en-US', { minimumFractionDigits: 2 }).format(n)}`
-    }
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: currency || defaultCurrency }).format(n)
+    return formatCurrency(n, currency)
   }
 
   // Statuses where editing/deleting is allowed
