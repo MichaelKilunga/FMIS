@@ -22,10 +22,13 @@ export function useCurrency() {
         options.notation = 'compact'
     }
 
-    if (symbol && (!currencyCode || currencyCode === defaultCurrency)) {
-       return `${symbol} ${new Intl.NumberFormat('en-US', options).format(num)}`
+    // Only use custom symbol logic if global symbol is defined AND 
+    // either no specific currency was requested OR it matches our default
+    if (symbol.trim() && (!currencyCode || currencyCode === defaultCurrency)) {
+       return `${symbol.trim()} ${new Intl.NumberFormat('en-US', options).format(num)}`
     }
 
+    // Standard currency formatting (e.g., $1,000.00 or TZS 1,000.00)
     options.style = 'currency'
     options.currency = cur
 
