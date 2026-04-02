@@ -86,10 +86,6 @@ class WorkflowEngine
 
         // Verify user has the required role
         $roleName = $step->role_name;
-        // Normalize role name: if 'admin' but not in DB, assume 'tenant-admin'
-        if ($roleName === 'admin' && !Role::where('name', 'admin')->where('guard_name', 'web')->exists()) {
-            $roleName = 'tenant-admin';
-        }
 
         if (!$user->hasRole($roleName)) {
             throw new \Illuminate\Auth\Access\AuthorizationException("You do not have the required role ({$roleName}) for this step.");
@@ -166,13 +162,8 @@ class WorkflowEngine
         try {
             $usersToNotify = User::forTenant($approval->tenant_id)->role($roleName)->get();
         } catch (\Spatie\Permission\Exceptions\RoleDoesNotExist $e) {
-            if ($roleName === 'admin') {
-                $roleName = 'tenant-admin';
-                $usersToNotify = User::forTenant($approval->tenant_id)->role($roleName)->get();
-            } else {
-                Log::warning("Workflow step required role '{$roleName}' which does not exist.");
-                return;
-            }
+            Log::warning("Workflow step required role '{$roleName}' which does not exist.");
+            return;
         }
 
         if ($usersToNotify->isEmpty()) {

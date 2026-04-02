@@ -48,11 +48,15 @@ class WorkflowController extends Controller
             'description' => $data['description'] ?? null,
         ]);
 
-        foreach ($data['steps'] as $step) {
-            // Map common alias
+        foreach ($data['steps'] as $index => $step) {
             $roleName = $step['role_name'] ?? '';
-            if ($roleName === 'admin') {
-                $roleName = 'tenant-admin';
+            
+            // Validate role existence
+            if (!\Spatie\Permission\Models\Role::where('name', $roleName)->exists()) {
+                return response()->json([
+                    'message' => "Invalid role: '{$roleName}' at step ".($index + 1),
+                    'errors' => ['role_name' => ["The role '{$roleName}' does not exist in the system."]]
+                ], 422);
             }
             
             ApprovalStep::create([
@@ -100,10 +104,15 @@ class WorkflowController extends Controller
 
         if (isset($data['steps'])) {
             $stepIds = [];
-            foreach ($data['steps'] as $stepData) {
+            foreach ($data['steps'] as $index => $stepData) {
                 $roleName = $stepData['role_name'] ?? '';
-                if ($roleName === 'admin') {
-                    $roleName = 'tenant-admin';
+
+                // Validate role existence
+                if (!\Spatie\Permission\Models\Role::where('name', $roleName)->exists()) {
+                    return response()->json([
+                        'message' => "Invalid role: '{$roleName}' at step ".($index + 1),
+                        'errors' => ['role_name' => ["The role '{$roleName}' does not exist in the system."]]
+                    ], 422);
                 }
 
                 $step = ApprovalStep::updateOrCreate(
