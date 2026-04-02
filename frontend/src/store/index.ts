@@ -52,16 +52,24 @@ interface SettingsState {
   isModuleEnabled: (module: string) => boolean
 }
 
-export const useSettingsStore = create<SettingsState>((set, get) => ({
-  settings: {},
-  isLoaded: false,
-  setSettings: (settings) => set({ settings, isLoaded: true }),
-  getSetting: (key, fallback = null) => get().settings[key] ?? fallback,
-  isModuleEnabled: (module) => {
-    const val = get().settings[`modules.${module}.enabled`]
-    return val === undefined ? true : Boolean(val)
-  },
-}))
+export const useSettingsStore = create<SettingsState>()(
+  persist(
+    (set, get) => ({
+      settings: {},
+      isLoaded: false,
+      setSettings: (newSettings) => set((state) => ({ 
+        settings: { ...state.settings, ...newSettings }, 
+        isLoaded: true 
+      })),
+      getSetting: (key, fallback = null) => get().settings[key] ?? fallback,
+      isModuleEnabled: (module) => {
+        const val = get().settings[`modules.${module}.enabled`]
+        return val === undefined ? true : Boolean(val)
+      },
+    }),
+    { name: 'fmis-settings' }
+  )
+)
 
 // --- Online Status Store ---
 interface OnlineState {

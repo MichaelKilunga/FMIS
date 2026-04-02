@@ -88,21 +88,28 @@ export default function App() {
   // Restore session and load settings on mount
   useEffect(() => {
     // Always fetch global settings for branding/content (publicly available keys)
-    settingsApi.getSystemSettings().then(res => {
-        // Merge into settings store or handle specifically
-        setSettings(res.data)
-        // Apply initial branding with these global settings
-        applyBranding(tenant, res.data)
-    }).catch(() => {})
+    const loadSettings = async () => {
+      try {
+        const token = localStorage.getItem('fmis_token')
+        
+        // Priority: Load ALL settings if authenticated
+        if (token) {
+          const res = await settingsApi.all()
+          setSettings(res.data)
+          applyBranding(tenant, res.data)
+          return
+        }
 
-    const token = localStorage.getItem('fmis_token')
-    if (token) {
-      // If we have a token, load all settings (including private ones)
-      settingsApi.all().then(res => {
-        setSettings(res.data)
-        applyBranding(tenant, res.data)
-      }).catch(() => {})
+        // Secondary: Load just system settings for public pages
+        const sysRes = await settingsApi.getSystemSettings()
+        setSettings(sysRes.data)
+        applyBranding(tenant, sysRes.data)
+      } catch (err) {
+        console.error('Failed to load settings:', err)
+      }
     }
+
+    loadSettings()
   }, [isAuthenticated, tenant])
 
 
