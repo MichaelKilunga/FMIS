@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Models\User;
+use App\Models\ApprovalStep;
 use Spatie\Permission\Models\Role;
 
 class WorkflowEngine
@@ -40,12 +41,21 @@ class WorkflowEngine
             return null;
         }
 
+        // Find the first applicable step
+        $firstStep = $workflow->steps->filter(fn($step) => $this->isStepApplicable($step, $model))->first();
+        
+        if (!$firstStep) {
+            // No steps applicable, auto-approve
+            $model->update(['status' => Transaction::STATUS_APPROVED]);
+            return null;
+        }
+
         $approval = Approval::create([
             'tenant_id'       => $tenantId,
             'approvable_type' => get_class($model),
             'approvable_id'   => $model->id,
             'workflow_id'     => $workflow->id,
-            'current_step'    => 1,
+            'current_step'    => $firstStep->step_order,
             'status'          => 'pending',
         ]);
 
@@ -121,8 +131,13 @@ class WorkflowEngine
                 $this->audit->log('approval_rejected', $approval->approvable, [], [], ['step' => $step->step_order]);
                 $this->notifyRequester($approval, 'rejected', $comment);
             } else {
-                // Check if there are more steps
-                $nextStep = $approval->workflow->steps()->where('step_order', '>', $step->step_order)->first();
+                // Find the next applicable step
+                $nextStep = $approval->workflow->steps()
+                    ->where('step_order', '>', $step->step_order)
+                    ->get()
+                    ->filter(fn($s) => $this->isStepApplicable($s, $approval->approvable))
+                    ->first();
+
                 if ($nextStep) {
                     $approval->update(['current_step' => $nextStep->step_order]);
                     $this->audit->log('approval_step_approved', $approval->approvable, [], [], ['step' => $step->step_order]);
@@ -222,6 +237,33 @@ class WorkflowEngine
         return null;
     }
 
+    /**
+     * Check if a specific step should be executed for the given model
+     */
+    protected function isStepApplicable(ApprovalStep $step, object $model): bool
+    {
+        // 1. Check Thresholds (if applicable)
+        $amount = $model->amount ?? $model->total ?? $model->subtotal ?? null;
+
+        if ($amount !== null) {
+            if ($step->threshold_min !== null && $amount < $step->threshold_min) {
+                return false;
+            }
+            if ($step->threshold_max !== null && $amount > $step->threshold_max) {
+                return false;
+            }
+        }
+
+        // 2. Check Step-specific conditions
+        if (!empty($step->conditions)) {
+            if (!$this->matchesConditions($model, $step->conditions)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     protected function matchesConditions(object $model, array $conditions): bool
     {
         if (empty($conditions)) {
@@ -243,8 +285,11 @@ class WorkflowEngine
             str_ends_with($rule, '_gt')  => $model->{str_replace('_gt', '', $rule)} > $value,
             str_ends_with($rule, '_gte') => $model->{str_replace('_gte', '', $rule)} >= $value,
             str_ends_with($rule, '_lt')  => $model->{str_replace('_lt', '', $rule)} < $value,
+            str_ends_with($rule, '_lte') => $model->{str_replace('_lte', '', $rule)} <= $value,
             str_ends_with($rule, '_eq')  => $model->{str_replace('_eq', '', $rule)} == $value,
-            default                      => true,
+            str_ends_with($rule, '_neq') => $model->{str_replace('_neq', '', $rule)} != $value,
+            // Default equality match if no operator is specified
+            default                      => $model->{$rule} == $value,
         };
     }
 }

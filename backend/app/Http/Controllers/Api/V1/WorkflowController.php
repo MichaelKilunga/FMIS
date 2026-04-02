@@ -50,10 +50,21 @@ class WorkflowController extends Controller
 
         foreach ($data['steps'] as $step) {
             // Map common alias
-            if ($step['role_name'] === 'admin') {
-                $step['role_name'] = 'tenant-admin';
+            $roleName = $step['role_name'] ?? '';
+            if ($roleName === 'admin') {
+                $roleName = 'tenant-admin';
             }
-            ApprovalStep::create(['workflow_id' => $workflow->id, ...$step]);
+            
+            ApprovalStep::create([
+                'workflow_id' => $workflow->id,
+                'role_name'   => $roleName,
+                'step_order'  => $step['step_order'],
+                'threshold_min' => $step['threshold_min'] ?? null,
+                'threshold_max' => $step['threshold_max'] ?? null,
+                'require_all'   => $step['require_all'] ?? false,
+                'sla_hours'     => $step['sla_hours'] ?? 48,
+                'conditions'    => $step['conditions'] ?? null,
+            ]);
         }
 
         $this->audit->logModelChange('workflow_created', $workflow);
@@ -88,14 +99,31 @@ class WorkflowController extends Controller
         $workflow->update($data);
 
         if (isset($data['steps'])) {
-            $workflow->steps()->delete();
-            foreach ($data['steps'] as $step) {
-                // Map common alias
-                if ($step['role_name'] === 'admin') {
-                    $step['role_name'] = 'tenant-admin';
+            $stepIds = [];
+            foreach ($data['steps'] as $stepData) {
+                $roleName = $stepData['role_name'] ?? '';
+                if ($roleName === 'admin') {
+                    $roleName = 'tenant-admin';
                 }
-                ApprovalStep::create(['workflow_id' => $workflow->id, ...$step]);
+
+                $step = ApprovalStep::updateOrCreate(
+                    [
+                        'workflow_id' => $workflow->id,
+                        'step_order'  => $stepData['step_order']
+                    ],
+                    [
+                        'role_name'     => $roleName,
+                        'threshold_min' => $stepData['threshold_min'] ?? null,
+                        'threshold_max' => $stepData['threshold_max'] ?? null,
+                        'require_all'   => $stepData['require_all'] ?? false,
+                        'sla_hours'     => $stepData['sla_hours'] ?? 48,
+                        'conditions'    => $stepData['conditions'] ?? null,
+                    ]
+                );
+                $stepIds[] = $step->id;
             }
+            // Delete steps that were not included in the update
+            $workflow->steps()->whereNotIn('id', $stepIds)->delete();
         }
 
         $this->audit->logModelChange('workflow_updated', $workflow);
