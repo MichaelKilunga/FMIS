@@ -130,10 +130,11 @@ export default function DebtsPage() {
     {
       header: 'Actions',
       accessor: (debt: Debt) => (
-        <div className="flex gap-2">
+        <div className="flex items-center gap-3">
           {debt.type === 'receivable' && debt.status !== 'paid' && (debt as any).client_id && (
             <button 
-              onClick={() => sendReminder(debt.id)}
+              id={`remind-debt-${debt.id}`}
+              onClick={(e) => { e.stopPropagation(); sendReminder(debt.id) }}
               className="p-1.5 rounded text-blue-400 hover:bg-blue-900/20 transition-colors"
               title="Send Reminder"
             >
@@ -142,8 +143,9 @@ export default function DebtsPage() {
           )}
           {debt.status !== 'paid' && user?.permissions?.includes('manage-debts') && (
             <button 
-              onClick={() => { setSelectedDebt(debt); setShowPayModal(true) }}
-              className="p-1.5 rounded text-emerald-400 hover:bg-emerald-900/20 transition-colors"
+              id={`record-payment-${debt.id}`}
+              onClick={(e) => { e.stopPropagation(); setSelectedDebt(debt); setShowPayModal(true) }}
+              className="p-1.5 rounded text-emerald-400 hover:bg-emerald-900/20 transition-colors border border-emerald-500/20"
               title="Record Payment"
             >
               <DollarSign size={16} />
@@ -151,8 +153,9 @@ export default function DebtsPage() {
           )}
           {user?.permissions?.includes('manage-debts') && (
             <button 
-              onClick={() => { setSelectedDebt(debt); setShowAddModal(true) }}
-              className="p-1.5 rounded text-blue-400 hover:bg-blue-900/20 transition-colors"
+              id={`edit-debt-${debt.id}`}
+              onClick={(e) => { e.stopPropagation(); setSelectedDebt(debt); setShowAddModal(true) }}
+              className="p-1.5 rounded text-blue-400 hover:bg-blue-900/20 transition-colors border border-blue-500/20"
               title="Edit"
             >
               <MoreHorizontal size={16} />
@@ -160,7 +163,8 @@ export default function DebtsPage() {
           )}
           {user?.permissions?.includes('manage-debts') && (
             <button 
-              onClick={() => handleDelete(debt.id)}
+              id={`delete-debt-${debt.id}`}
+              onClick={(e) => { e.stopPropagation(); handleDelete(debt.id) }}
               className="p-1.5 rounded text-slate-500 hover:text-red-400 hover:bg-red-900/20 transition-colors"
               title="Delete"
             >

@@ -60,6 +60,7 @@ class DatabaseSeeder extends Seeder
             'view-analytics', 'view-debts', 'manage-debts',
             'view-fraud-alerts',
             'view-audit-logs',
+            'manage-users',
         ]);
 
         // Manager: same as director but without approval authority (usually)
