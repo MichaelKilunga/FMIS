@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { approvalsApi } from '../../services/api'
 import type { Approval, PaginatedResponse } from '../../types'
 import { CheckCircle, XCircle, Loader2, Clock, User, DollarSign, FileText, GitBranch, ArrowRight } from 'lucide-react'
@@ -222,9 +223,9 @@ export default function ApprovalsPage() {
       )}
 
       {/* Comment / Confirm Modal */}
-      {commenting && (
+      {commenting && createPortal(
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-[10000] p-4">
-          <div className="glass-card p-6 w-full max-w-md animate-fade-in">
+          <div className="glass-card p-6 w-full max-w-md animate-fade-in shadow-2xl border border-slate-700/50">
             <h3 className={clsx('text-lg font-semibold mb-1', commenting.action === 'approve' ? 'text-emerald-400' : 'text-red-400')}>
               {commenting.action === 'approve' ? '✅ Confirm Approval' : '❌ Confirm Rejection'}
             </h3>
@@ -237,25 +238,33 @@ export default function ApprovalsPage() {
               value={comment}
               onChange={e => setComment(e.target.value)}
               placeholder={commenting.action === 'reject' ? 'Rejection reason (required)...' : 'Optional comment...'}
-              className="fmis-input h-24 resize-none mb-4"
+              className="fmis-input h-28 resize-none mb-4"
+              autoFocus
             />
             <div className="flex gap-3 justify-end">
-              <button onClick={() => { setCommenting(null); setComment('') }} className="btn-ghost">Cancel</button>
+              <button 
+                onClick={() => { setCommenting(null); setComment('') }} 
+                className="btn-ghost"
+                disabled={acting}
+              >
+                Cancel
+              </button>
               <button
                 onClick={handleAction}
                 disabled={acting || (commenting.action === 'reject' && !comment.trim())}
                 className={clsx(
-                  'flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-colors disabled:opacity-50',
+                  'flex items-center gap-2 px-5 py-2.5 rounded-lg font-bold text-sm transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none',
                   commenting.action === 'approve'
-                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                    : 'bg-red-600 hover:bg-red-700 text-white'
+                    ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/20'
+                    : 'bg-red-600 hover:bg-red-500 text-white shadow-lg shadow-red-900/20'
                 )}>
-                {acting ? <Loader2 size={14} className="animate-spin" /> : commenting.action === 'approve' ? <CheckCircle size={14} /> : <XCircle size={14} />}
+                {acting ? <Loader2 size={16} className="animate-spin" /> : commenting.action === 'approve' ? <CheckCircle size={16} /> : <XCircle size={16} />}
                 Confirm {commenting.action === 'approve' ? 'Approval' : 'Rejection'}
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )

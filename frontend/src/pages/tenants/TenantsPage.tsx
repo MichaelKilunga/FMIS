@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { Building, Plus, MoreVertical, Edit, Trash, Check, X, Search, Activity, Globe, Zap, Shield, Mail, ArrowUpRight } from 'lucide-react'
 import api from '../../services/api'
 import toast from 'react-hot-toast'
@@ -217,9 +218,9 @@ export default function TenantsPage() {
         />
       </div>
 
-      {isModalOpen && (
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 animate-fade-in">
-          <div className="glass-card max-w-xl w-full p-8 shadow-2xl relative border-slate-700/80 group">
+      {isModalOpen && createPortal(
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 animate-fade-in shadow-2xl">
+          <div className="glass-card max-w-xl w-full p-8 shadow-2xl relative border-slate-700/80 group overflow-y-auto max-h-[90vh]">
             <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-blue-600 via-blue-400 to-blue-600 rounded-t-xl" />
             
             <div className="flex justify-between items-center mb-8">
@@ -283,7 +284,8 @@ export default function TenantsPage() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )
