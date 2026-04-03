@@ -10,13 +10,16 @@ import { useAuthStore, useSettingsStore, useOnlineStore } from '../../store'
 import { authApi } from '../../services/api'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
+import { useTranslation } from 'react-i18next'
 import NotificationBell from '../notifications/NotificationBell'
+import LanguageSwitcher from './LanguageSwitcher'
 import PwaInstallBanner from './PwaInstallBanner'
 import GlobalLocationTracker from '../GlobalLocationTracker'
 
 interface NavItem {
   to: string
   label: string
+  translationKey: string
   icon: any
   module?: string
   adminOnly?: boolean
@@ -25,30 +28,31 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { to: '/app/dashboard',    label: 'Dashboard',       icon: LayoutDashboard },
-  { to: '/app/analytics',    label: 'Analytics',       icon: BarChart3, adminOnly: true },
-  { to: '/app/transactions', label: 'Transactions',     icon: ArrowLeftRight },
-  { to: '/app/approvals',    label: 'Approvals',        icon: CheckSquare },
-  { to: '/app/invoices',     label: 'Invoices',         icon: FileText },
-  { to: '/app/clients',      label: 'Clients',          icon: Users },
-  { to: '/app/billing',      label: 'Billing',          icon: FileText }, // Recurring bills
-  { to: '/app/debts',        label: 'Debts',            icon: Coins },
-  { to: '/app/accounts',     label: 'Accounts',         icon: Wallet },
-  { to: '/app/categories',   label: 'Categories',       icon: Tag },
-  { to: '/app/tasks',        label: 'Tasks',            icon: CheckSquare },
-  { to: '/app/attendance',   label: 'Attendance',       icon: Clock },
-  { to: '/app/budgets',      label: 'Budgets',          icon: PieChart,   module: 'budgeting' },
-  { to: '/app/reports',      label: 'Reports',          icon: BarChart3,  module: 'reporting' },
-  { to: '/app/fraud',        label: 'Fraud Detection',  icon: Shield,     module: 'fraud_detection' },
-  { to: '/app/audit-logs',   label: 'Audit Trail',      icon: AlertTriangle },
-  { to: '/app/workflows',    label: 'Workflows',        icon: GitBranch, tenantAdminOnly: true },
-  { to: '/app/elections',    label: 'Election Center',  icon: Gavel },
-  { to: '/app/tenants',      label: 'Tenants',          icon: Building, systemAdminOnly: true },
-  { to: '/app/users',        label: 'Users',            icon: Users, tenantAdminOnly: true },
-  { to: '/app/settings',     label: 'Settings',         icon: Settings, tenantAdminOnly: true },
+  { to: '/app/dashboard',    label: 'Dashboard',       translationKey: 'common.dashboard',       icon: LayoutDashboard },
+  { to: '/app/analytics',    label: 'Analytics',       translationKey: 'common.analytics',       icon: BarChart3, adminOnly: true },
+  { to: '/app/transactions', label: 'Transactions',     translationKey: 'common.transactions',     icon: ArrowLeftRight },
+  { to: '/app/approvals',    label: 'Approvals',        translationKey: 'common.approvals',        icon: CheckSquare },
+  { to: '/app/invoices',     label: 'Invoices',         translationKey: 'common.invoices',         icon: FileText },
+  { to: '/app/clients',      label: 'Clients',          translationKey: 'common.clients',          icon: Users },
+  { to: '/app/billing',      label: 'Billing',          translationKey: 'common.billing',          icon: FileText }, // Recurring bills
+  { to: '/app/debts',        label: 'Debts',            translationKey: 'common.debts',            icon: Coins },
+  { to: '/app/accounts',     label: 'Accounts',         translationKey: 'common.accounts',         icon: Wallet },
+  { to: '/app/categories',   label: 'Categories',       translationKey: 'common.categories',       icon: Tag },
+  { to: '/app/tasks',        label: 'Tasks',            translationKey: 'common.tasks',            icon: CheckSquare },
+  { to: '/app/attendance',   label: 'Attendance',       translationKey: 'common.attendance',       icon: Clock },
+  { to: '/app/budgets',      label: 'Budgets',          translationKey: 'common.budgets',          icon: PieChart,   module: 'budgeting' },
+  { to: '/app/reports',      label: 'Reports',          translationKey: 'common.reports',          icon: BarChart3,  module: 'reporting' },
+  { to: '/app/fraud',        label: 'Fraud Detection',  translationKey: 'common.fraud_detection',  icon: Shield,     module: 'fraud_detection' },
+  { to: '/app/audit-logs',   label: 'Audit Trail',      translationKey: 'common.audit_trail',      icon: AlertTriangle },
+  { to: '/app/workflows',    label: 'Workflows',        translationKey: 'common.workflows',        icon: GitBranch, tenantAdminOnly: true },
+  { to: '/app/elections',    label: 'Election Center',  translationKey: 'common.election_center',  icon: Gavel },
+  { to: '/app/tenants',      label: 'Tenants',          translationKey: 'common.tenants',          icon: Building, systemAdminOnly: true },
+  { to: '/app/users',        label: 'Users',            translationKey: 'common.users',            icon: Users, tenantAdminOnly: true },
+  { to: '/app/settings',     label: 'Settings',         translationKey: 'common.settings',         icon: Settings, tenantAdminOnly: true },
 ]
 
 export default function Layout() {
+  const { t } = useTranslation()
   const { user, tenant, logout } = useAuthStore()
   const { isModuleEnabled } = useSettingsStore()
   const { isOnline, pendingSyncCount } = useOnlineStore()
@@ -65,7 +69,7 @@ export default function Layout() {
     try { await authApi.logout() } catch {}
     logout()
     navigate('/login')
-    toast.success('Logged out successfully')
+    toast.success(t('common.sign_out_success', { defaultValue: 'Logged out successfully' }))
   }
 
   const visibleNavItems = navItems.filter(item => {
@@ -119,7 +123,7 @@ export default function Layout() {
 
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
-          {visibleNavItems.map(({ to, label, icon: Icon }) => (
+          {visibleNavItems.map(({ to, label, translationKey, icon: Icon }) => (
             <NavLink key={to} to={isSystemAdmin && label === 'Dashboard' ? '/app/system-dashboard' : to} className={({ isActive }) => clsx(
               'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150',
               isActive
@@ -127,7 +131,7 @@ export default function Layout() {
                 : 'text-slate-400 hover:text-slate-100 hover:bg-slate-700/40'
             )}>
               <Icon className="shrink-0" size={18} />
-              {(sidebarOpen || mobileMenuOpen) && <span className="truncate animate-fade-in">{label}</span>}
+              {(sidebarOpen || mobileMenuOpen) && <span className="truncate animate-fade-in">{t(translationKey)}</span>}
             </NavLink>
           ))}
         </nav>
@@ -156,12 +160,15 @@ export default function Layout() {
             <div className={clsx('flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full whitespace-nowrap', isOnline ? 'bg-emerald-900/50 text-emerald-400' : 'bg-yellow-900/50 text-yellow-400 animate-pulse-slow')}>
               {isOnline ? <Wifi size={12} /> : <WifiOff size={12} />}
               <span className="hidden sm:inline">
-                {isOnline ? 'Online' : `Offline${pendingSyncCount > 0 ? ` · ${pendingSyncCount} pending` : ''}`}
+                {isOnline ? t('common.online') : `${t('common.offline')}${pendingSyncCount > 0 ? ` · ${pendingSyncCount} ${t('common.pending')}` : ''}`}
               </span>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
+            {/* Language Switcher */}
+            <LanguageSwitcher />
+
             {/* Notification bell */}
             <NotificationBell />
 
@@ -180,11 +187,11 @@ export default function Layout() {
                 <div className="absolute right-0 top-full mt-1 w-48 glass-card py-1 z-[9000] animate-fade-in">
                   <button onClick={() => { setProfileOpen(false); navigate('/app/profile'); }}
                     className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-800 transition-colors">
-                    <Settings size={15} /> My Profile
+                    <Settings size={15} /> {t('common.my_profile')}
                   </button>
                   <button onClick={handleLogout}
                     className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-red-400 hover:bg-red-900/20 transition-colors">
-                    <LogOut size={15} /> Sign out
+                    <LogOut size={15} /> {t('common.sign_out')}
                   </button>
                 </div>
               )}

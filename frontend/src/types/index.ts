@@ -26,6 +26,7 @@ export interface User {
   email: string
   phone?: string
   department?: string
+  locale?: string
   avatar_url: string
   is_active: boolean
   is_verified: boolean

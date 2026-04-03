@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { createPortal } from 'react-dom'
 import { approvalsApi } from '../../services/api'
 import type { Approval, PaginatedResponse } from '../../types'
@@ -10,6 +11,7 @@ import Pagination from '../../components/Pagination'
 import { useCurrency } from '../../hooks/useCurrency'
 
 export default function ApprovalsPage() {
+  const { t } = useTranslation()
   const { formatCurrency } = useCurrency()
   const [data, setData] = useState<PaginatedResponse<Approval> | null>(null)
   const [loading, setLoading] = useState(true)
@@ -35,7 +37,7 @@ export default function ApprovalsPage() {
     try {
       if (commenting.action === 'approve') await approvalsApi.approve(commenting.id, comment)
       else await approvalsApi.reject(commenting.id, comment)
-      toast.success(commenting.action === 'approve' ? '✅ Approved successfully' : '❌ Rejected')
+      toast.success(t(commenting.action === 'approve' ? 'approvals.approve_success' : 'approvals.reject_success'))
       setCommenting(null); setComment(''); load()
     } catch (e: unknown) {
       toast.error((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Action failed')
@@ -50,15 +52,15 @@ export default function ApprovalsPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-bold text-white">Approvals</h1>
-        <p className="text-slate-400 text-sm">Review and act on pending approval requests</p>
+        <h1 className="text-2xl font-bold text-white">{t('approvals.title')}</h1>
+        <p className="text-slate-400 text-sm">{t('approvals.description')}</p>
       </div>
 
       {/* Summary badge */}
       {!loading && (data?.data.length ?? 0) > 0 && (
         <div className="flex items-center gap-2 text-sm text-amber-400 bg-amber-900/20 border border-amber-800/40 rounded-lg px-4 py-2.5">
           <Clock size={15} className="shrink-0" />
-          <span><strong>{data?.data.length}</strong> pending approval{data!.data.length !== 1 ? 's' : ''} require{data!.data.length === 1 ? 's' : ''} your attention.</span>
+          <span>{t(data?.data.length === 1 ? 'approvals.pending_requests' : 'approvals.pending_requests_plural', { count: data?.data.length })}</span>
         </div>
       )}
 
@@ -97,16 +99,16 @@ export default function ApprovalsPage() {
                     </div>
                     <div>
                       <p className="text-white font-semibold text-base">
-                        {description || `Approval Request #${approval.id}`}
+                        {description || t('approvals.request_id', { id: approval.id })}
                       </p>
                       <p className="text-xs text-slate-400 mt-0.5">
-                        Approval #{approval.id} · {format(new Date((approval as any).created_at), 'dd MMM yyyy, HH:mm')}
+                        {t('approvals.title')} #{approval.id} · {format(new Date((approval as any).created_at), 'dd MMM yyyy, HH:mm')}
                       </p>
                     </div>
                   </div>
                   {/* Status badge */}
                   <span className="px-3 py-1 rounded-full text-xs font-semibold bg-amber-900/30 text-amber-400 border border-amber-800/40 flex items-center gap-1.5">
-                    <Clock size={11} /> Pending
+                    <Clock size={11} /> {t('common.pending')}
                   </span>
                 </div>
 
@@ -115,7 +117,7 @@ export default function ApprovalsPage() {
                   {/* Amount */}
                   {amount != null && (
                     <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700/50">
-                      <p className="text-xs text-slate-500 flex items-center gap-1 mb-1"><DollarSign size={11} /> Amount</p>
+                      <p className="text-xs text-slate-500 flex items-center gap-1 mb-1"><DollarSign size={11} /> {t('common.amount')}</p>
                       <p className={clsx('text-sm font-bold', txType === 'income' ? 'text-emerald-400' : 'text-red-400')}>
                         {txType === 'income' ? '+' : '-'}{fmt(amount, currency)}
                       </p>
@@ -127,19 +129,19 @@ export default function ApprovalsPage() {
                       <p className="text-xs text-slate-500 mb-1">Type</p>
                       <span className={clsx('text-xs font-semibold px-2 py-0.5 rounded-full capitalize',
                         txType === 'income' ? 'bg-emerald-900/50 text-emerald-400' : 'bg-red-900/50 text-red-400')}>
-                        {txType}
+                        {t(`common.${txType}`, { defaultValue: txType })}
                       </span>
                     </div>
                   )}
                   {/* Requested by */}
                   <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700/50">
-                    <p className="text-xs text-slate-500 flex items-center gap-1 mb-1"><User size={11} /> Requested by</p>
+                    <p className="text-xs text-slate-500 flex items-center gap-1 mb-1"><User size={11} /> {t('approvals.requested_by')}</p>
                     <p className="text-sm text-slate-200 font-medium truncate">{requesterName}</p>
                   </div>
                   {/* Date */}
                   {txDate && (
                     <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700/50">
-                      <p className="text-xs text-slate-500 flex items-center gap-1 mb-1"><Clock size={11} /> Transaction Date</p>
+                      <p className="text-xs text-slate-500 flex items-center gap-1 mb-1"><Clock size={11} /> {t('approvals.tx_date')}</p>
                       <p className="text-sm text-slate-200">{format(new Date(txDate), 'dd MMM yyyy')}</p>
                     </div>
                   )}
@@ -150,8 +152,8 @@ export default function ApprovalsPage() {
                   <div className="flex items-center gap-2 mb-2">
                     <GitBranch size={13} className="text-blue-400" />
                     <p className="text-xs text-slate-400">
-                      Workflow: <span className="text-blue-400 font-medium">{approval.workflow?.name}</span>
-                      {' · '}Step {approval.current_step} of {steps.length}
+                      {t('approvals.workflow')}: <span className="text-blue-400 font-medium">{approval.workflow?.name}</span>
+                      {' · '}{t('approvals.step_x_of_y', { current: approval.current_step, total: steps.length })}
                     </p>
                   </div>
                   {steps.length > 0 && (
@@ -179,7 +181,7 @@ export default function ApprovalsPage() {
                   )}
                   {currentStepInfo && (
                     <p className="text-xs text-slate-500 mt-2">
-                      Awaiting action from: <span className="text-slate-300 capitalize font-medium">{currentStepInfo.role_name}</span>
+                      {t('approvals.awaiting_action')}: <span className="text-slate-300 capitalize font-medium">{currentStepInfo.role_name}</span>
                     </p>
                   )}
                 </div>
@@ -189,12 +191,12 @@ export default function ApprovalsPage() {
                   <button
                     onClick={() => setCommenting({ id: approval.id, action: 'reject' })}
                     className="flex items-center gap-1.5 px-4 py-2 bg-red-900/30 text-red-400 hover:bg-red-900/60 border border-red-800/40 rounded-lg text-sm font-medium transition-colors">
-                    <XCircle size={15} /> Reject
+                    <XCircle size={15} /> {t('approvals.reject')}
                   </button>
                   <button
                     onClick={() => setCommenting({ id: approval.id, action: 'approve' })}
                     className="flex items-center gap-1.5 px-4 py-2 bg-emerald-900/30 text-emerald-400 hover:bg-emerald-900/60 border border-emerald-800/40 rounded-lg text-sm font-medium transition-colors">
-                    <CheckCircle size={15} /> Approve
+                    <CheckCircle size={15} /> {t('approvals.approve')}
                   </button>
                 </div>
               </div>
@@ -204,8 +206,8 @@ export default function ApprovalsPage() {
           {(data?.data.length ?? 0) === 0 && (
             <div className="glass-card p-12 text-center">
               <CheckCircle size={44} className="mx-auto mb-3 text-emerald-500/40" />
-              <p className="text-slate-400 font-medium">All caught up!</p>
-              <p className="text-slate-600 text-sm mt-1">No pending approvals at this time.</p>
+              <p className="text-slate-400 font-medium">{t('approvals.all_caught_up')}</p>
+              <p className="text-slate-600 text-sm mt-1">{t('approvals.no_pending')}</p>
             </div>
           )}
 
@@ -227,17 +229,17 @@ export default function ApprovalsPage() {
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-[10000] p-4">
           <div className="glass-card p-6 w-full max-w-md animate-fade-in shadow-2xl border border-slate-700/50">
             <h3 className={clsx('text-lg font-semibold mb-1', commenting.action === 'approve' ? 'text-emerald-400' : 'text-red-400')}>
-              {commenting.action === 'approve' ? '✅ Confirm Approval' : '❌ Confirm Rejection'}
+              {commenting.action === 'approve' ? `✅ ${t('approvals.confirm_approval')}` : `❌ ${t('approvals.confirm_rejection')}`}
             </h3>
             <p className="text-slate-400 text-sm mb-4">
               {commenting.action === 'approve'
-                ? 'Optionally leave a comment before approving.'
-                : 'Please provide a reason for rejection.'}
+                ? t('approvals.optional_comment')
+                : t('approvals.rejection_reason')}
             </p>
             <textarea
               value={comment}
               onChange={e => setComment(e.target.value)}
-              placeholder={commenting.action === 'reject' ? 'Rejection reason (required)...' : 'Optional comment...'}
+              placeholder={commenting.action === 'reject' ? t('approvals.placeholder_reject') : t('approvals.placeholder_approve')}
               className="fmis-input h-28 resize-none mb-4"
               autoFocus
             />
@@ -247,7 +249,7 @@ export default function ApprovalsPage() {
                 className="btn-ghost"
                 disabled={acting}
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 onClick={handleAction}
@@ -259,7 +261,7 @@ export default function ApprovalsPage() {
                     : 'bg-red-600 hover:bg-red-500 text-white shadow-lg shadow-red-900/20'
                 )}>
                 {acting ? <Loader2 size={16} className="animate-spin" /> : commenting.action === 'approve' ? <CheckCircle size={16} /> : <XCircle size={16} />}
-                Confirm {commenting.action === 'approve' ? 'Approval' : 'Rejection'}
+                {t('approvals.confirm')} {t(`approvals.${commenting.action}`)}
               </button>
             </div>
           </div>

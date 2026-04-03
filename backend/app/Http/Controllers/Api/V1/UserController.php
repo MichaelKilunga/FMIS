@@ -36,6 +36,7 @@ class UserController extends Controller
                 'email'      => $u->email,
                 'phone'      => $u->phone,
                 'department' => $u->department,
+                'locale'     => $u->locale,
                 'avatar_url' => $u->avatar_url,
                 'is_active'  => $u->is_active,
                 'tenant_id'  => $u->tenant_id,
@@ -59,6 +60,7 @@ class UserController extends Controller
             'role'       => 'required|string|exists:roles,name',
             'department' => 'nullable|string',
             'phone'      => 'nullable|string',
+            'locale'     => 'nullable|string|in:en,sw',
             'tenant_id'  => $isSuperAdmin ? 'nullable|exists:tenants,id' : 'prohibited',
         ]);
 
@@ -69,6 +71,7 @@ class UserController extends Controller
             'password'   => $data['password'],
             'department' => $data['department'] ?? null,
             'phone'      => $data['phone'] ?? null,
+            'locale'     => $data['locale'] ?? 'en',
         ]);
 
         $user->assignRole($data['role']);
@@ -95,6 +98,7 @@ class UserController extends Controller
             'name'       => 'sometimes|string|max:255',
             'department' => 'nullable|string',
             'phone'      => 'nullable|string',
+            'locale'     => 'sometimes|string|in:en,sw',
             'is_active'  => 'sometimes|boolean',
             'role'       => 'sometimes|string|exists:roles,name',
             'tenant_id'  => $request->user()->tenant_id === null ? 'nullable|exists:tenants,id' : 'prohibited',

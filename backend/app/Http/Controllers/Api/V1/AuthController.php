@@ -66,6 +66,7 @@ class AuthController extends Controller
             'email'      => 'sometimes|email|max:255|unique:users,email,'.$user->id,
             'phone'      => 'sometimes|nullable|string',
             'department' => 'sometimes|nullable|string',
+            'locale'     => 'sometimes|string|in:en,sw',
         ]);
 
         if ($request->hasFile('avatar')) {
@@ -154,6 +155,7 @@ class AuthController extends Controller
             'avatar_url' => $user->avatar_url,
             'is_verified'=> $user->hasVerifiedEmail(),
             'is_active'  => $user->is_active,
+            'locale'     => $user->locale,
             'tenant_id'  => $user->tenant_id,
             'tenant'     => $user->tenant ? $user->tenant->branding : null,
             'roles'      => $user->roles->pluck('name'),

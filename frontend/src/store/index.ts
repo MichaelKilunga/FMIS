@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import i18n from '../i18n'
 import type { User, Tenant, Settings } from '../types'
 
 // --- Auth Store ---
@@ -24,11 +25,20 @@ export const useAuthStore = create<AuthState>()(
       setAuth: (user, token, tenant) => {
         localStorage.setItem('fmis_token', token)
         set({ user, token, tenant, isAuthenticated: true })
+        // Sync language
+        if (user.locale && i18n.language !== user.locale) {
+          i18n.changeLanguage(user.locale)
+        }
         // Apply branding with global fallbacks from SettingsStore
         const globalSettings = useSettingsStore.getState().settings
         applyBranding(tenant, globalSettings)
       },
-      setUser: (user) => set({ user }),
+      setUser: (user) => {
+        set({ user })
+        if (user.locale && i18n.language !== user.locale) {
+          i18n.changeLanguage(user.locale)
+        }
+      },
       setTenant: (tenant) => {
         set({ tenant })
         const globalSettings = useSettingsStore.getState().settings
