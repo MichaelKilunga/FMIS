@@ -168,6 +168,12 @@ export interface Approval {
   current_step: number
   status: 'pending' | 'approved' | 'rejected'
   logs: ApprovalLog[]
+  /** Injected by API: has the currently authenticated user already acted on this? */
+  has_user_acted?: boolean
+  /** The action the current user took: 'approved' | 'rejected' | null */
+  user_action?: 'approved' | 'rejected' | null
+  /** ISO timestamp of when the current user acted */
+  user_acted_at?: string | null
 }
 
 export interface ApprovalLog {

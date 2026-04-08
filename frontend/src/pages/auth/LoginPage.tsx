@@ -16,12 +16,18 @@ type FormData = z.infer<typeof schema>
 
 export default function LoginPage() {
   const navigate = useNavigate()
-  const { setAuth } = useAuthStore()
+  const { isAuthenticated, setAuth } = useAuthStore()
   const { setSettings } = useSettingsStore()
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
 
   const [lastBranding, setLastBranding] = useState<{name?: string, logo?: string, primary_color?: string, accent_color?: string} | null>(null)
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/app/dashboard', { replace: true })
+    }
+  }, [isAuthenticated, navigate])
 
   useEffect(() => {
     const stored = localStorage.getItem('fmis_last_branding')

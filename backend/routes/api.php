@@ -99,6 +99,7 @@ Route::group(['prefix' => 'v1'], function () {
 
         // Approvals
         Route::get('approvals', [ApprovalController::class, 'index']);
+        Route::post('approvals/bulk-action', [ApprovalController::class, 'bulkAction']);
         Route::get('approvals/{approval}', [ApprovalController::class, 'show']);
         Route::post('approvals/{approval}/approve', [ApprovalController::class, 'approve']);
         Route::post('approvals/{approval}/reject', [ApprovalController::class, 'reject']);

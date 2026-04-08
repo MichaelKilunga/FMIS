@@ -66,8 +66,19 @@ api.interceptors.response.use(
 
     // Handle 401 Unauthorized
     if (response?.status === 401) {
+      // Clear both individual token and store state
       localStorage.removeItem('fmis_token')
-      window.location.href = '/login'
+      try {
+        const { logout } = (await import('../store')).useAuthStore.getState()
+        logout()
+      } catch (e) {
+        console.error('Failed to logout from store:', e)
+      }
+
+      // Only redirect if we are on a protected route
+      if (window.location.pathname.startsWith('/app')) {
+        window.location.href = '/login'
+      }
     }
 
     // Handle Offline Mutations (POST, PUT, DELETE)
@@ -189,6 +200,8 @@ export const approvalsApi = {
   get: (id: number) => api.get(`/approvals/${id}`),
   approve: (id: number, comment?: string) => api.post(`/approvals/${id}/approve`, { comment }),
   reject: (id: number, comment: string) => api.post(`/approvals/${id}/reject`, { comment }),
+  bulkAction: (ids: number[], action: 'approve' | 'reject', comment?: string) =>
+    api.post('/approvals/bulk-action', { ids, action, comment }),
 }
 
 export const invoicesApi = {

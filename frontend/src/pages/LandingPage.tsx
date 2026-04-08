@@ -7,9 +7,11 @@ import {
   Menu, X, Sparkles, Box
 } from 'lucide-react'
 import { settingsApi } from '../services/api'
+import { useAuthStore } from '../store'
 
 export default function LandingPage() {
   const navigate = useNavigate()
+  const { isAuthenticated } = useAuthStore()
   const [config, setConfig] = useState<Record<string, string>>({})
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
@@ -131,14 +133,26 @@ export default function LandingPage() {
               <a href="#features" className="text-slate-400 hover:text-white transition-colors">Features</a>
               <a href="#solutions" className="text-slate-400 hover:text-white transition-colors">Solutions</a>
               <div className="h-4 w-px bg-slate-800" />
-              <button onClick={() => navigate('/login')} className="text-slate-400 hover:text-white transition-colors">Sign In</button>
-              <button 
-                onClick={() => navigate('/register')} 
-                className="relative group overflow-hidden bg-white text-slate-950 px-7 py-3 rounded-full font-black transition-all hover:pr-10 active:scale-95 shadow-xl shadow-white/5"
-              >
-                <span className="relative z-10 transition-all">Get Started</span>
-                <ChevronRight size={16} className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all" />
-              </button>
+              {isAuthenticated ? (
+                <button 
+                  onClick={() => navigate('/app/dashboard')} 
+                  className="relative group overflow-hidden bg-white text-slate-950 px-7 py-3 rounded-full font-black transition-all hover:pr-10 active:scale-95 shadow-xl shadow-white/5"
+                >
+                  <span className="relative z-10 transition-all">Go to Dashboard</span>
+                  <ChevronRight size={16} className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all" />
+                </button>
+              ) : (
+                <>
+                  <button onClick={() => navigate('/login')} className="text-slate-400 hover:text-white transition-colors">Sign In</button>
+                  <button 
+                    onClick={() => navigate('/register')} 
+                    className="relative group overflow-hidden bg-white text-slate-950 px-7 py-3 rounded-full font-black transition-all hover:pr-10 active:scale-95 shadow-xl shadow-white/5"
+                  >
+                    <span className="relative z-10 transition-all">Get Started</span>
+                    <ChevronRight size={16} className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all" />
+                  </button>
+                </>
+              )}
             </div>
 
             {/* Mobile Menu Button */}
@@ -158,10 +172,18 @@ export default function LandingPage() {
               <a href="#features" className="block text-xl font-bold text-slate-200" onClick={() => setMobileMenuOpen(false)}>Features</a>
               <a href="#solutions" className="block text-xl font-bold text-slate-200" onClick={() => setMobileMenuOpen(false)}>Solutions</a>
               <div className="h-px bg-white/5" />
-              <button onClick={() => { navigate('/login'); setMobileMenuOpen(false); }} className="block w-full text-left text-xl font-bold text-slate-400">Sign In</button>
-              <button onClick={() => { navigate('/register'); setMobileMenuOpen(false); }} className="w-full bg-blue-600 text-white py-4 rounded-2xl font-black text-lg shadow-xl shadow-blue-500/20">
-                Register Now
-              </button>
+              {isAuthenticated ? (
+                <button onClick={() => { navigate('/app/dashboard'); setMobileMenuOpen(false); }} className="w-full bg-blue-600 text-white py-4 rounded-2xl font-black text-lg shadow-xl shadow-blue-500/20">
+                  Go to Dashboard
+                </button>
+              ) : (
+                <>
+                  <button onClick={() => { navigate('/login'); setMobileMenuOpen(false); }} className="block w-full text-left text-xl font-bold text-slate-400">Sign In</button>
+                  <button onClick={() => { navigate('/register'); setMobileMenuOpen(false); }} className="w-full bg-blue-600 text-white py-4 rounded-2xl font-black text-lg shadow-xl shadow-blue-500/20">
+                    Register Now
+                  </button>
+                </>
+              )}
             </div>
           </div>
         )}

@@ -42,17 +42,19 @@ class TransactionService
             throw new \RuntimeException('Only draft transactions can be submitted.');
         }
 
-        $transaction->update(['status' => Transaction::STATUS_SUBMITTED]);
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($transaction) {
+            $transaction->update(['status' => Transaction::STATUS_SUBMITTED]);
 
-        // Run fraud detection before initiating workflow
-        $alerts = $this->fraudDetection->analyze($transaction);
+            // Run fraud detection before initiating workflow
+            $this->fraudDetection->analyze($transaction);
 
-        // Initiate approval workflow
-        $this->workflow->initiate($transaction, 'transaction');
+            // Initiate approval workflow (may auto-approve if no workflow configured)
+            $this->workflow->initiate($transaction, 'transaction');
 
-        $this->audit->log('transaction_submitted', $transaction);
+            $this->audit->log('transaction_submitted', $transaction);
 
-        return $transaction->fresh();
+            return $transaction->fresh();
+        });
     }
 
     public function post(Transaction $transaction): Transaction

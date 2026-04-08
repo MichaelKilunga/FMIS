@@ -44,6 +44,8 @@ class TransactionController extends Controller
             'type'             => 'required|in:income,expense,transfer',
             'category_id'      => 'nullable|exists:transaction_categories,id',
             'account_id'       => 'nullable|exists:accounts,id',
+            'budget_id'        => 'nullable|exists:budgets,id',
+            'department'       => 'nullable|string|max:100',
             'description'      => 'required|string|max:500',
             'notes'            => 'nullable|string',
             'transaction_date' => 'required|date',
@@ -53,6 +55,11 @@ class TransactionController extends Controller
         $data['tenant_id']  = $request->user()->tenant_id;
         $data['created_by'] = $request->user()->id;
         $data['status']     = Transaction::STATUS_DRAFT;
+
+        // Normalize date to avoid timezone shift issues
+        if (!empty($data['transaction_date'])) {
+            $data['transaction_date'] = \Illuminate\Support\Carbon::parse($data['transaction_date'])->toDateString();
+        }
 
         // Restriction Check
         if (!empty($data['account_id'])) {
@@ -70,7 +77,12 @@ class TransactionController extends Controller
             }
         }
 
-        $transaction = $this->transactionService->create($data);
+        try {
+            $transaction = $this->transactionService->create($data);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Transaction create failed', ['error' => $e->getMessage(), 'data' => $data]);
+            return response()->json(['message' => 'Failed to create transaction: ' . $e->getMessage()], 500);
+        }
 
         return response()->json($transaction->load(['category', 'account', 'createdBy']), 201);
     }
@@ -102,6 +114,11 @@ class TransactionController extends Controller
         ]);
 
         $before = $transaction->toArray();
+
+        // Normalize date to avoid timezone shift issues
+        if (!empty($data['transaction_date'])) {
+            $data['transaction_date'] = \Illuminate\Support\Carbon::parse($data['transaction_date'])->toDateString();
+        }
 
         // Restriction Check
         if (!empty($data['account_id'])) {
@@ -141,8 +158,14 @@ class TransactionController extends Controller
     public function submit(Request $request, Transaction $transaction): JsonResponse
     {
         $this->authorizeForTenant($request, $transaction);
-        $transaction = $this->transactionService->submit($transaction);
-        return response()->json($transaction->load(['category', 'account', 'approval']));
+        try {
+            $transaction = $this->transactionService->submit($transaction);
+            return response()->json($transaction->load(['category', 'account', 'approval']));
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            return response()->json(['message' => $e->getMessage()], 403);
+        } catch (\RuntimeException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
     }
 
     public function post(Request $request, Transaction $transaction): JsonResponse
