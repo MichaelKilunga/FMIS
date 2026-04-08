@@ -174,6 +174,8 @@ export interface Approval {
   user_action?: 'approved' | 'rejected' | null
   /** ISO timestamp of when the current user acted */
   user_acted_at?: string | null
+  created_at: string
+  updated_at: string
 }
 
 export interface ApprovalLog {
