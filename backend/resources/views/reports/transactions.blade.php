@@ -30,6 +30,7 @@
             <tr>
                 <th>Date</th>
                 <th>Reference</th>
+                <th>Description</th>
                 <th>Category</th>
                 <th>Type</th>
                 <th>Amount</th>
@@ -46,6 +47,7 @@
                 <tr>
                     <td>{{ $t->transaction_date->format('Y-m-d') }}</td>
                     <td>{{ $t->reference }}</td>
+                    <td>{{ $t->description ?? 'N/A' }}</td>
                     <td>{{ $t->category?->name ?? 'N/A' }}</td>
                     <td class="{{ $t->type }}">{{ ucfirst($t->type) }}</td>
                     <td>{{ number_format($t->amount, 2) }}</td>

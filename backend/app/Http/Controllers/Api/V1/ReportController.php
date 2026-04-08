@@ -84,12 +84,13 @@ class ReportController extends Controller
 
         if ($format === 'excel' || $format === 'csv') {
             return $this->streamCsv("report_{$fromDate}_{$toDate}.csv", function($file) use ($transactions) {
-                fputcsv($file, ['ID', 'Date', 'Reference', 'Type', 'Category', 'Account', 'Amount', 'Status']);
+                fputcsv($file, ['ID', 'Date', 'Reference', 'Description', 'Type', 'Category', 'Account', 'Amount', 'Status']);
                 foreach ($transactions as $t) {
                     fputcsv($file, [
                         $t->id, 
                         $t->transaction_date->format('Y-m-d'), 
                         $t->reference, 
+                        $t->description,
                         ucfirst($t->type), 
                         $t->category?->name ?? 'N/A', 
                         $t->account?->name ?? 'N/A',

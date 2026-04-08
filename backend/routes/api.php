@@ -103,6 +103,7 @@ Route::group(['prefix' => 'v1'], function () {
         Route::get('approvals/{approval}', [ApprovalController::class, 'show']);
         Route::post('approvals/{approval}/approve', [ApprovalController::class, 'approve']);
         Route::post('approvals/{approval}/reject', [ApprovalController::class, 'reject']);
+        Route::post('approvals/{approval}/resolve', [ApprovalController::class, 'resolve']);
 
         // Approval Workflows Config
         Route::apiResource('workflows', WorkflowController::class)->middleware('can:manage-workflows');

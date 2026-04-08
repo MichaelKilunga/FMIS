@@ -269,6 +269,7 @@ export default function ReportsPage() {
                 <tr>
                   <th className="px-6 py-4 font-medium">Date</th>
                   <th className="px-6 py-4 font-medium">Reference</th>
+                  <th className="px-6 py-4 font-medium">Description</th>
                   <th className="px-6 py-4 font-medium">Category</th>
                   <th className="px-6 py-4 font-medium">Type</th>
                   <th className="px-6 py-4 font-medium">Amount</th>
@@ -280,6 +281,7 @@ export default function ReportsPage() {
                   <tr key={t.id} className="bg-slate-900/20 hover:bg-slate-800/40 transition-colors">
                     <td className="px-6 py-4 text-slate-300">{new Date(t.transaction_date).toLocaleDateString()}</td>
                     <td className="px-6 py-4 font-mono text-blue-400">{t.reference}</td>
+                    <td className="px-6 py-4 text-slate-300">{t.description || 'N/A'}</td>
                     <td className="px-6 py-4 text-slate-300">{t.category?.name || 'N/A'}</td>
                     <td className="px-6 py-4">
                       <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase ${

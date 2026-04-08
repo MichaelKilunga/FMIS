@@ -184,4 +184,26 @@ class ApprovalController extends Controller
             'succeeded' => $results['succeeded'],
         ], $failCount > 0 && $successCount === 0 ? 422 : 200);
     }
+
+    public function resolve(Request $request, Approval $approval): JsonResponse
+    {
+        abort_if($approval->tenant_id !== $request->user()->tenant_id, 403);
+        
+        // Only Admins or those with workflow management permissions can resolve
+        if (!$request->user()->hasRole('admin') && !$request->user()->can('manage-workflows')) {
+            return response()->json(['message' => 'Unauthorized. Administrative resolution required.'], 403);
+        }
+
+        $data = $request->validate([
+            'action'  => 'required|in:approved,rejected',
+            'comment' => 'required|string|max:1000',
+        ]);
+
+        try {
+            $updated = $this->workflowEngine->forceResolve($approval, $data['action'], $data['comment']);
+            return response()->json($updated->load(['approvable', 'logs.user']));
+        } catch (\Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+    }
 }

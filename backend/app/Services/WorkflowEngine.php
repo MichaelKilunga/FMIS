@@ -283,4 +283,42 @@ class WorkflowEngine
             default                      => $model->{$rule} == $value,
         };
     }
+
+    /**
+     * Forcefully resolve an approval bypassing all standard workflow rules (Admin only)
+     */
+    public function forceResolve(Approval $approval, string $action, string $comment): Approval
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        return DB::transaction(function () use ($approval, $action, $comment, $user) {
+            $currentStep = $approval->currentStep();
+
+            ApprovalLog::create([
+                'tenant_id'   => $approval->tenant_id,
+                'approval_id' => $approval->id,
+                'step_id'     => $currentStep?->id,
+                'user_id'     => $user->id,
+                'action'      => $action === 'approved' ? 'resolved_approved' : 'resolved_rejected',
+                'comment'     => "(Admin Resolution) {$comment}",
+            ]);
+
+            $finalStatus = $action === 'approved' ? 'approved' : 'rejected';
+            $txnStatus   = $action === 'approved' ? Transaction::STATUS_APPROVED : Transaction::STATUS_REJECTED;
+
+            $approval->update(['status' => $finalStatus]);
+            $approval->approvable->update(['status' => $txnStatus]);
+
+            $this->audit->log('approval_force_resolved', $approval->approvable, [], [], [
+                'admin_id' => $user->id,
+                'action'   => $action,
+                'comment'  => $comment,
+            ]);
+
+            $this->notifyRequester($approval, $finalStatus, "This request was resolved administratively: {$comment}");
+
+            return $approval->fresh();
+        });
+    }
 }

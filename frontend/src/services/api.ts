@@ -202,6 +202,8 @@ export const approvalsApi = {
   reject: (id: number, comment: string) => api.post(`/approvals/${id}/reject`, { comment }),
   bulkAction: (ids: number[], action: 'approve' | 'reject', comment?: string) =>
     api.post('/approvals/bulk-action', { ids, action, comment }),
+  resolve: (id: number, action: 'approved' | 'rejected', comment: string) =>
+    api.post(`/approvals/${id}/resolve`, { action, comment }),
 }
 
 export const invoicesApi = {
