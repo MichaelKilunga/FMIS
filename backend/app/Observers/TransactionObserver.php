@@ -16,6 +16,7 @@ class TransactionObserver
     public function created(Transaction $transaction): void
     {
         $this->adjustBudget($transaction, false);
+        $this->adjustAccountBalance($transaction, false);
     }
 
     /**
@@ -28,6 +29,8 @@ class TransactionObserver
         $oldBudgetId = $transaction->getOriginal('budget_id');
         $oldType = $transaction->getOriginal('type');
         $oldStatus = $transaction->getOriginal('status');
+        $oldAccountId = $transaction->getOriginal('account_id');
+        $oldToAccountId = $transaction->getOriginal('to_account_id');
 
         $this->adjustBudgetUsingValues(
             $transaction->tenant_id,
@@ -38,8 +41,18 @@ class TransactionObserver
             true // Reverse the old effect
         );
 
+        $this->adjustAccountBalanceUsingValues(
+            $oldAccountId,
+            $oldToAccountId,
+            $oldAmount,
+            $oldType,
+            $oldStatus,
+            true
+        );
+
         // 2. Add NEW effect
         $this->adjustBudget($transaction, false);
+        $this->adjustAccountBalance($transaction, false);
     }
 
     /**
@@ -48,6 +61,7 @@ class TransactionObserver
     public function deleted(Transaction $transaction): void
     {
         $this->adjustBudget($transaction, true);
+        $this->adjustAccountBalance($transaction, true);
     }
 
     protected function adjustBudget(Transaction $transaction, bool $isReverse): void
@@ -60,6 +74,45 @@ class TransactionObserver
             $transaction->status,
             $isReverse
         );
+    }
+
+    protected function adjustAccountBalance(Transaction $transaction, bool $isReverse): void
+    {
+        $this->adjustAccountBalanceUsingValues(
+            $transaction->account_id,
+            $transaction->to_account_id,
+            (float) $transaction->amount,
+            $transaction->type,
+            $transaction->status,
+            $isReverse
+        );
+    }
+
+    protected function adjustAccountBalanceUsingValues(?int $accountId, ?int $toAccountId, float $amount, string $type, string $status, bool $isReverse): void
+    {
+        // If rejected, it shouldn't have an effect.
+        if ($status === Transaction::STATUS_REJECTED || $amount <= 0) {
+            return;
+        }
+
+        $change = $isReverse ? -$amount : $amount;
+
+        if ($type === 'expense' && $accountId) {
+            $account = \App\Models\Account::find($accountId);
+            $account?->decrement('balance', $change);
+        } elseif ($type === 'income' && $accountId) {
+            $account = \App\Models\Account::find($accountId);
+            $account?->increment('balance', $change);
+        } elseif ($type === 'transfer') {
+            if ($accountId) {
+                $account = \App\Models\Account::find($accountId);
+                $account?->decrement('balance', $change);
+            }
+            if ($toAccountId) {
+                $account = \App\Models\Account::find($toAccountId);
+                $account?->increment('balance', $change);
+            }
+        }
     }
 
     protected function adjustBudgetUsingValues(int $tenantId, ?int $budgetId, float $amount, string $type, string $status, bool $isReverse): void

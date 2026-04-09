@@ -81,13 +81,14 @@ class AccountController extends Controller
             'transaction_date'=> 'required|date',
         ]);
 
-        $tenantId = $request->user()->tenant_id;
+        $user = $request->user();
+        $tenantId = $user->tenant_id;
         
         // Verify both accounts belong to the tenant
         $fromAccount = Account::where('tenant_id', $tenantId)->findOrFail($data['from_account_id']);
         $toAccount = Account::where('tenant_id', $tenantId)->findOrFail($data['to_account_id']);
 
-        // Check if fromAccount has enough balance
+        // Check if fromAccount has enough balance (optional check, better for UX)
         if ($fromAccount->balance < $data['amount']) {
             return response()->json([
                 'message' => 'Insufficient funds in the source account.',
@@ -95,31 +96,53 @@ class AccountController extends Controller
             ], 422);
         }
 
-        $txnData = [
-            'tenant_id'        => $tenantId,
-            'amount'           => $data['amount'],
-            'type'             => 'transfer',
-            'account_id'       => $data['from_account_id'],
-            'to_account_id'    => $data['to_account_id'],
-            'created_by'       => $request->user()->id,
-            'description'      => $data['description'] ?? "Transfer from {$fromAccount->name} to {$toAccount->name}",
-            'transaction_date' => $data['transaction_date'],
-            'status'           => \App\Models\Transaction::STATUS_POSTED, // Transfers are usually immediate? Or should they follow workflow?
-            // If the user wants workflow, we should set it to DRAFT and call submit.
-            // But usually account transfers by admin are direct. 
-            // Let's make it POSTED for now to simplify, or follow what the user might expect.
-            // The request says "allow tenants admin make funds transfer", admins usually have power.
-        ];
-
-        // Normalize date
-        $txnData['transaction_date'] = \Illuminate\Support\Carbon::parse($txnData['transaction_date'])->toDateString();
+        // Use a shared reference to link the two transactions
+        $sharedRef = 'TRF-' . strtoupper(substr(uniqid(), -8));
+        $date = \Illuminate\Support\Carbon::parse($data['transaction_date'])->toDateString();
+        $description = $data['description'] ?? "Fund Transfer: {$fromAccount->name} to {$toAccount->name}";
 
         try {
-            $transaction = $this->transactionService->create($txnData);
-            return response()->json([
-                'message' => 'Funds transferred successfully.',
-                'transaction' => $transaction->load(['account', 'createdBy'])
-            ], 201);
+            return \Illuminate\Support\Facades\DB::transaction(function () use ($tenantId, $user, $data, $fromAccount, $toAccount, $sharedRef, $date, $description) {
+                // 1. Create OUT transaction (Expense from source)
+                $outTxn = $this->transactionService->create([
+                    'tenant_id'        => $tenantId,
+                    'amount'           => $data['amount'],
+                    'type'             => 'expense',
+                    'account_id'       => $fromAccount->id,
+                    'created_by'       => $user->id,
+                    'description'      => $description . " (Transfer Out)",
+                    'transaction_date' => $date,
+                    'status'           => \App\Models\Transaction::STATUS_DRAFT,
+                    'reference'        => $sharedRef . '-OUT',
+                    'metadata'         => ['is_transfer' => true, 'transfer_pair' => $sharedRef, 'peer_account' => $toAccount->id]
+                ]);
+
+                // 2. Create IN transaction (Income to destination)
+                $inTxn = $this->transactionService->create([
+                    'tenant_id'        => $tenantId,
+                    'amount'           => $data['amount'],
+                    'type'             => 'income',
+                    'account_id'       => $toAccount->id,
+                    'created_by'       => $user->id,
+                    'description'      => $description . " (Transfer In)",
+                    'transaction_date' => $date,
+                    'status'           => \App\Models\Transaction::STATUS_DRAFT,
+                    'reference'        => $sharedRef . '-IN',
+                    'metadata'         => ['is_transfer' => true, 'transfer_pair' => $sharedRef, 'peer_account' => $fromAccount->id]
+                ]);
+
+                // 3. Submit both for approval
+                $this->transactionService->submit($outTxn);
+                $this->transactionService->submit($inTxn);
+
+                return response()->json([
+                    'message' => 'Fund transfer initiated. Two transactions have been submitted for approval.',
+                    'transactions' => [
+                        'out' => $outTxn->load('account'),
+                        'in' => $inTxn->load('account')
+                    ]
+                ], 201);
+            });
         } catch (\Exception $e) {
             return response()->json(['message' => 'Transfer failed: ' . $e->getMessage()], 500);
         }

@@ -23,9 +23,6 @@ class TransactionService
         return DB::transaction(function () use ($data) {
             $transaction = Transaction::create($data);
 
-            // Update account balance
-            $this->updateAccountBalance($transaction, 'credit');
-
             // Audit
             $this->audit->logModelChange('transaction_created', $transaction);
 
@@ -77,26 +74,6 @@ class TransactionService
         return $transaction;
     }
 
-    protected function updateAccountBalance(Transaction $transaction, string $direction): void
-    {
-        if (!$transaction->account_id) return;
-
-        $amount = (float) $transaction->amount;
-        if ($transaction->type === 'expense') {
-            $transaction->account()->decrement('balance', $amount);
-        } elseif ($transaction->type === 'income') {
-            $transaction->account()->increment('balance', $amount);
-        } elseif ($transaction->type === 'transfer' && $transaction->to_account_id) {
-            // Decrement from source
-            $transaction->account()->decrement('balance', $amount);
-            
-            // Increment to destination
-            $destinationAccount = \App\Models\Account::find($transaction->to_account_id);
-            if ($destinationAccount) {
-                $destinationAccount->increment('balance', $amount);
-            }
-        }
-    }
 
     protected function notifyBudgetThreshold(Budget $budget, float $usage): void
     {
