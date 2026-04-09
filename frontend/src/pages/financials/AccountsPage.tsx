@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react'
-import { accountsApi } from '../../services/api'
-import type { Account } from '../../types'
-import { Plus, Building2, Wallet, Smartphone, CreditCard, Loader2, Edit2, Trash2, CheckCircle2, XCircle, ArrowLeftRight } from 'lucide-react'
+import { useEffect, useState, useCallback } from 'react'
+import { accountsApi, transactionsApi, categoriesApi } from '../../services/api'
+import type { Account, TransactionCategory } from '../../types'
+import { Plus, Building2, Wallet, Smartphone, CreditCard, Loader2, Edit2, Trash2, CheckCircle2, XCircle, ArrowLeftRight, FileText, Calendar, Search, ArrowUpCircle, ArrowDownCircle } from 'lucide-react'
 import clsx from 'clsx'
 import toast from 'react-hot-toast'
 import Modal from '../../components/Modal'
@@ -51,6 +51,8 @@ export default function AccountsPage() {
   const [showTransferModal, setShowTransferModal] = useState(false)
   const [editingAccount, setEditingAccount] = useState<Account | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [statementAccount, setStatementAccount] = useState<Account | null>(null)
+  const [categories, setCategories] = useState<TransactionCategory[]>([])
 
   const { register, handleSubmit, reset, setValue } = useForm<AccountFormData>({
     defaultValues: {
@@ -69,30 +71,33 @@ export default function AccountsPage() {
     }
   })
 
-  const loadAccounts = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await accountsApi.list()
-      // Accounts list is not paginated based on the controller
-      setAccounts(Array.isArray(res.data) ? res.data : [])
+      const [accRes, catRes] = await Promise.all([
+        accountsApi.list(),
+        categoriesApi.list()
+      ])
+      setAccounts(Array.isArray(accRes.data) ? accRes.data : [])
+      setCategories(catRes.data)
     } catch (error) {
-      toast.error('Failed to load accounts')
+      toast.error('Failed to load accounts or categories')
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
   useEffect(() => {
-    loadAccounts()
+    loadData()
 
     const handleSyncComplete = () => {
       console.log('Sync completed, reloading accounts data...')
-      loadAccounts()
+      loadData()
     }
 
     window.addEventListener('fmis-sync-completed', handleSyncComplete)
     return () => window.removeEventListener('fmis-sync-completed', handleSyncComplete)
-  }, [])
+  }, [loadData])
 
   const handleEdit = (account: Account) => {
     setEditingAccount(account)
@@ -140,7 +145,7 @@ export default function AccountsPage() {
         toast.success('Account created successfully')
       }
       setShowModal(false)
-      loadAccounts()
+      loadData()
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Operation failed')
     } finally {
@@ -154,7 +159,7 @@ export default function AccountsPage() {
       await accountsApi.transfer(data)
       toast.success('Funds transferred successfully')
       setShowTransferModal(false)
-      loadAccounts()
+      loadData()
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Transfer failed')
     } finally {
@@ -167,7 +172,7 @@ export default function AccountsPage() {
     try {
       await accountsApi.delete(id)
       toast.success('Account deleted')
-      loadAccounts()
+      loadData()
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to delete account')
     }
@@ -252,6 +257,9 @@ export default function AccountsPage() {
       header: 'Actions',
       accessor: (acc: Account) => (
         <div className="flex items-center gap-2">
+          <button onClick={() => setStatementAccount(acc)} className="p-1.5 text-emerald-400 hover:bg-emerald-900/30 rounded-lg transition-colors" title="View Statement">
+            <FileText size={14} />
+          </button>
           <button onClick={() => handleEdit(acc)} className="p-1.5 text-blue-400 hover:bg-blue-900/30 rounded-lg transition-colors" title="Edit">
             <Edit2 size={14} />
           </button>
@@ -430,6 +438,182 @@ export default function AccountsPage() {
           </div>
         </form>
       </Modal>
+
+      <AccountStatementModal 
+        account={statementAccount} 
+        onClose={() => setStatementAccount(null)} 
+        categories={categories}
+      />
     </div>
+  )
+}
+
+function AccountStatementModal({ account, onClose, categories }: { account: Account | null, onClose: () => void, categories: TransactionCategory[] }) {
+  const { formatCurrency } = useCurrency()
+  const [loading, setLoading] = useState(false)
+  const [transactions, setTransactions] = useState<any[]>([])
+  const [categoryFilter, setCategoryFilter] = useState('')
+  const [dateFrom, setDateFrom] = useState(() => {
+    const d = new Date()
+    d.setDate(1) // Start of month
+    return d.toISOString().split('T')[0]
+  })
+  const [dateTo, setDateTo] = useState(() => new Date().toISOString().split('T')[0])
+
+  const loadStatement = async () => {
+    if (!account) return
+    setLoading(true)
+    try {
+      const res = await transactionsApi.list({
+        account_id: account.id,
+        category_id: categoryFilter,
+        from: dateFrom,
+        to: dateTo,
+        per_page: 100, // Load a good amount for the statement
+        status: 'posted', // Usually statements show finalized transactions
+      })
+      setTransactions(res.data.data)
+    } catch {
+      toast.error('Failed to load statement transactions')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (account) loadStatement()
+  }, [account, dateFrom, dateTo, categoryFilter])
+
+  if (!account) return null
+
+  const totalIn = transactions
+    .filter(t => t.type === 'income' || (t.type === 'transfer' && t.to_account_id === account.id))
+    .reduce((sum, t) => sum + Number(t.amount), 0)
+  
+  const totalOut = transactions
+    .filter(t => t.type === 'expense' || (t.type === 'transfer' && t.account_id === account.id))
+    .reduce((sum, t) => sum + Number(t.amount), 0)
+
+  return (
+    <Modal isOpen={!!account} onClose={onClose} title={`Account Statement: ${account.name}`} size="xl">
+      <div className="space-y-6">
+        {/* Period Selector & Summary */}
+        <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center bg-slate-900/50 p-4 rounded-xl border border-slate-700/50">
+          <div className="flex items-center gap-3">
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">From</label>
+              <input 
+                type="date" 
+                value={dateFrom} 
+                onChange={e => setDateFrom(e.target.value)} 
+                className="fmis-input py-1 text-sm w-36" 
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">To</label>
+              <input 
+                type="date" 
+                value={dateTo} 
+                onChange={e => setDateTo(e.target.value)} 
+                className="fmis-input py-1 text-sm w-36" 
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Category</label>
+              <select
+                value={categoryFilter}
+                onChange={e => setCategoryFilter(e.target.value)}
+                className="fmis-select py-1 text-sm w-40"
+              >
+                <option value="">All Categories</option>
+                {categories.map(cat => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
+              </select>
+            </div>
+            <button 
+              onClick={loadStatement}
+              className="mt-5 p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+            >
+              <Search size={16} />
+            </button>
+          </div>
+
+          <div className="flex gap-6">
+            <div className="text-right">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Total Inflow</p>
+              <p className="text-emerald-400 font-bold text-lg">{formatCurrency(totalIn, account.currency)}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Total Outflow</p>
+              <p className="text-rose-400 font-bold text-lg">{formatCurrency(totalOut, account.currency)}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Transactions list */}
+        <div className="max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-12 gap-3 text-slate-500">
+              <Loader2 className="animate-spin" size={32} />
+              <p>Fetching transaction history...</p>
+            </div>
+          ) : transactions.length === 0 ? (
+            <div className="text-center py-12 text-slate-500 bg-slate-900/20 rounded-xl border border-dashed border-slate-800">
+              <p>No posted transactions found for this period.</p>
+            </div>
+          ) : (
+            <table className="w-full text-left border-separate border-spacing-y-2">
+              <thead className="sticky top-0 bg-slate-950 z-10">
+                <tr className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                  <th className="px-4 py-2">Date</th>
+                  <th className="px-4 py-2">Details</th>
+                  <th className="px-4 py-2 text-right">Inflow</th>
+                  <th className="px-4 py-2 text-right">Outflow</th>
+                </tr>
+              </thead>
+              <tbody>
+                {transactions.map(t => {
+                  const isInflow = t.type === 'income' || (t.type === 'transfer' && t.to_account_id === account.id)
+                  return (
+                    <tr key={t.id} className="bg-slate-900/40 hover:bg-slate-800/60 transition-colors group">
+                      <td className="px-4 py-3 rounded-l-xl border-y border-l border-slate-800/40 group-hover:border-slate-700/60">
+                        <span className="text-sm text-slate-400 whitespace-nowrap">
+                          {new Date(t.transaction_date).toLocaleDateString(undefined, { day: '2-digit', month: 'short' })}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 border-y border-slate-800/40 group-hover:border-slate-700/60">
+                        <p className="text-sm font-medium text-slate-200 line-clamp-1">{t.description}</p>
+                        <p className="text-[10px] text-slate-500 uppercase tracking-tight">{t.reference} · {t.type}</p>
+                      </td>
+                      <td className="px-4 py-3 border-y border-slate-800/40 group-hover:border-slate-700/60 text-right">
+                        {isInflow ? (
+                          <div className="flex items-center justify-end gap-1.5 text-emerald-400 font-bold tabular-nums">
+                            <span>{formatCurrency(t.amount, account.currency)}</span>
+                            <ArrowUpCircle size={14} className="opacity-50" />
+                          </div>
+                        ) : '—'}
+                      </td>
+                      <td className="px-4 py-3 rounded-r-xl border-y border-r border-slate-800/40 group-hover:border-slate-700/60 text-right">
+                        {!isInflow ? (
+                          <div className="flex items-center justify-end gap-1.5 text-rose-400 font-bold tabular-nums">
+                            <span>{formatCurrency(t.amount, account.currency)}</span>
+                            <ArrowDownCircle size={14} className="opacity-50" />
+                          </div>
+                        ) : '—'}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        <div className="flex justify-end pt-4 border-t border-slate-700/50">
+          <button onClick={onClose} className="btn-primary px-8">Close</button>
+        </div>
+      </div>
+    </Modal>
   )
 }

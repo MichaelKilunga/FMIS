@@ -4,9 +4,9 @@ import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 
 export default function Modal({
-  isOpen, onClose, title, children
+  isOpen, onClose, title, children, size = 'md'
 }: {
-  isOpen: boolean; onClose: () => void; title: string; children: ReactNode;
+  isOpen: boolean; onClose: () => void; title: string; children: ReactNode; size?: 'sm' | 'md' | 'lg' | 'xl';
 }) {
   const [mounted, setMounted] = useState(false)
   
@@ -19,7 +19,12 @@ export default function Modal({
   return createPortal(
     <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm transition-opacity" onClick={onClose} />
-      <div className="relative glass-card w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto animate-fade-in shadow-2xl border border-slate-700/50">
+      <div className={`relative glass-card w-full p-6 max-h-[90vh] overflow-y-auto animate-fade-in shadow-2xl border border-slate-700/50 ${
+        size === 'sm' ? 'max-w-md' : 
+        size === 'md' ? 'max-w-lg' : 
+        size === 'lg' ? 'max-w-2xl' : 
+        'max-w-5xl'
+      }`}>
          <div className="flex items-center justify-between mb-6">
            <h2 className="text-xl font-bold text-white">{title}</h2>
            <button type="button" onClick={onClose} className="p-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded-md transition-colors">

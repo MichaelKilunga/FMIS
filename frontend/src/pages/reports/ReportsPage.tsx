@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { BarChart3, Download, Filter, Loader2, Calendar, PieChart } from 'lucide-react'
-import { reportsApi, categoriesApi } from '../../services/api'
+import { BarChart3, Download, Filter, Loader2, Calendar, PieChart, Wallet, Tag } from 'lucide-react'
+import { reportsApi, categoriesApi, accountsApi } from '../../services/api'
 import { toast } from 'react-hot-toast'
 import { useEffect } from 'react'
 import Modal from '../../components/Modal'
@@ -14,6 +14,7 @@ interface ReportConfig {
   type: 'all' | 'income' | 'expense' | 'budget_vs_actual';
   format: 'pdf' | 'excel';
   categoryId?: string;
+  accountId?: string;
   status?: string;
 }
 
@@ -24,28 +25,34 @@ export default function ReportsPage() {
   const [type, setType] = useState('all')
   const [status, setStatus] = useState('')
   const [categoryId, setCategoryId] = useState('')
+  const [accountId, setAccountId] = useState('')
   const [loading, setLoading] = useState<string | null>(null)
   const [configReport, setConfigReport] = useState<ReportConfig | null>(null)
   const [categories, setCategories] = useState<any[]>([])
+  const [accounts, setAccounts] = useState<any[]>([])
   const [previewData, setPreviewData] = useState<any[]>([])
   const [isPreviewLoading, setIsPreviewLoading] = useState(false)
 
   useEffect(() => {
-    const fetchCategories = async () => {
+    const fetchData = async () => {
       try {
-        const res = await categoriesApi.list()
-        setCategories(res.data)
+        const [resCats, resAccounts] = await Promise.all([
+          categoriesApi.list(),
+          accountsApi.list()
+        ])
+        setCategories(resCats.data)
+        setAccounts(resAccounts.data)
       } catch (err) {
-        console.error('Failed to fetch categories:', err)
+        console.error('Failed to fetch filter data:', err)
       }
     }
-    fetchCategories()
+    fetchData()
   }, [])
 
   const handlePreview = async () => {
     setIsPreviewLoading(true)
     try {
-      const params = { from_date: fromDate, to_date: toDate, type, status, category_id: categoryId }
+      const params = { from_date: fromDate, to_date: toDate, type, status, category_id: categoryId, account_id: accountId }
       const res = await reportsApi.preview(params)
       setPreviewData(res.data)
       toast.success(`Found ${res.data.length} transactions`)
@@ -61,7 +68,7 @@ export default function ReportsPage() {
     const exportId = params?.id || `${format}-${params?.period || 'custom'}`
     setLoading(exportId)
     try {
-      const exportParams = params || { from_date: fromDate, to_date: toDate, type, status, category_id: categoryId, format }
+      const exportParams = params || { from_date: fromDate, to_date: toDate, type, status, category_id: categoryId, account_id: accountId, format }
       const response = await reportsApi.export(exportParams)
       
       const url = window.URL.createObjectURL(new Blob([response.data]))
@@ -101,6 +108,7 @@ export default function ReportsPage() {
       type: 'all',
       format: 'pdf',
       categoryId: '',
+      accountId: '',
       status: ''
     })
   }
@@ -222,7 +230,7 @@ export default function ReportsPage() {
             </select>
           </div>
           <div>
-            <label className="fmis-label">Category</label>
+            <label className="fmis-label flex items-center gap-1"><Tag size={12} /> Category</label>
             <select 
               className="fmis-select"
               value={categoryId}
@@ -231,6 +239,19 @@ export default function ReportsPage() {
               <option value="">All Categories</option>
               {categories.map(cat => (
                 <option key={cat.id} value={cat.id}>{cat.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="fmis-label flex items-center gap-1"><Wallet size={12} /> Account</label>
+            <select 
+              className="fmis-select"
+              value={accountId}
+              onChange={(e) => setAccountId(e.target.value)}
+            >
+              <option value="">All Accounts</option>
+              {accounts.map(acc => (
+                <option key={acc.id} value={acc.id}>{acc.name}</option>
               ))}
             </select>
           </div>
@@ -363,18 +384,33 @@ export default function ReportsPage() {
               </div>
             </div>
 
-            <div>
-              <label className="fmis-label">Category Filter</label>
-              <select 
-                className="fmis-select"
-                value={configReport.categoryId}
-                onChange={e => setConfigReport({...configReport, categoryId: e.target.value})}
-              >
-                <option value="">All Categories</option>
-                {categories.map(cat => (
-                  <option key={cat.id} value={cat.id}>{cat.name}</option>
-                ))}
-              </select>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="fmis-label flex items-center gap-1"><Tag size={12} /> Category</label>
+                <select 
+                  className="fmis-select"
+                  value={configReport.categoryId}
+                  onChange={e => setConfigReport({...configReport, categoryId: e.target.value})}
+                >
+                  <option value="">All Categories</option>
+                  {categories.map(cat => (
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="fmis-label flex items-center gap-1"><Wallet size={12} /> Account</label>
+                <select 
+                  className="fmis-select"
+                  value={configReport.accountId}
+                  onChange={e => setConfigReport({...configReport, accountId: e.target.value})}
+                >
+                  <option value="">All Accounts</option>
+                  {accounts.map(acc => (
+                    <option key={acc.id} value={acc.id}>{acc.name}</option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             <div>
@@ -414,6 +450,7 @@ export default function ReportsPage() {
                    format: configReport.format,
                    status: configReport.status,
                    category_id: configReport.categoryId,
+                   account_id: configReport.accountId,
                    id: 'config-export'
                 })}
               >

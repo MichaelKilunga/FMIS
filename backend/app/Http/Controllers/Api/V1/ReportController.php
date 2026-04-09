@@ -31,6 +31,14 @@ class ReportController extends Controller
             if ($user->tenant_id) {
                 $query->where('tenant_id', $user->tenant_id);
             }
+
+            if ($request->filled('category_id')) {
+                $query->where('category_id', $request->category_id);
+            }
+
+            if ($request->filled('account_id')) {
+                $query->where('account_id', $request->account_id);
+            }
             
             $budgets = $query->where(function($q) use ($fromDate, $toDate) {
                     $q->whereBetween('start_date', [$fromDate, $toDate])
@@ -67,6 +75,7 @@ class ReportController extends Controller
         $transactions = $this->getFilteredTransactions($request);
         $status = $request->get('status');
         $categoryId = $request->get('category_id');
+        $accountId = $request->get('account_id');
 
         if ($format === 'pdf') {
             $data = [
@@ -76,6 +85,7 @@ class ReportController extends Controller
                 'type' => $type,
                 'status' => $status,
                 'category' => $categoryId ? \App\Models\TransactionCategory::find($categoryId) : null,
+                'account' => $accountId ? \App\Models\Account::find($accountId) : null,
                 'tenant' => $user->tenant ?? (object)['name' => 'System Wide']
             ];
             $pdf = Pdf::loadView('reports.transactions', $data);
@@ -112,6 +122,7 @@ class ReportController extends Controller
         $type = $request->get('type', 'all');
         $status = $request->get('status');
         $categoryId = $request->get('category_id');
+        $accountId = $request->get('account_id');
 
         $query = Transaction::query()->with(['category', 'account']);
 
@@ -131,6 +142,13 @@ class ReportController extends Controller
 
         if ($categoryId) {
             $query->where('category_id', $categoryId);
+        }
+
+        if ($accountId) {
+            $query->where(function($q) use ($accountId) {
+                $q->where('account_id', $accountId)
+                  ->orWhere('to_account_id', $accountId);
+            });
         }
 
         return $query->orderBy('transaction_date', 'desc')->get();

@@ -61,6 +61,8 @@ export default function TransactionsPage() {
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
   const [typeFilter, setTypeFilter] = useState('')
+  const [accountFilter, setAccountFilter] = useState('')
+  const [categoryFilter, setCategoryFilter] = useState('')
   const [showFilters, setShowFilters] = useState(false)
 
   // Modals
@@ -94,6 +96,8 @@ export default function TransactionsPage() {
       if (search) params.search = search
       if (statusFilter) params.status = statusFilter
       if (typeFilter) params.type = typeFilter
+      if (accountFilter) params.account_id = accountFilter
+      if (categoryFilter) params.category_id = categoryFilter
       if (dateFrom) params.from = dateFrom
       if (dateTo) params.to = dateTo
 
@@ -113,7 +117,7 @@ export default function TransactionsPage() {
     } finally {
       setLoading(false)
     }
-  }, [search, statusFilter, typeFilter, dateFrom, dateTo])
+  }, [search, statusFilter, typeFilter, accountFilter, categoryFilter, dateFrom, dateTo])
 
   useEffect(() => {
     load()
@@ -297,7 +301,7 @@ export default function TransactionsPage() {
     }
   }
 
-  const activeFiltersCount = [statusFilter, typeFilter, dateFrom, dateTo].filter(Boolean).length
+  const activeFiltersCount = [statusFilter, typeFilter, accountFilter, categoryFilter, dateFrom, dateTo].filter(Boolean).length
 
   const columns = [
     {
@@ -665,9 +669,27 @@ export default function TransactionsPage() {
               <label className="fmis-label flex items-center gap-1"><Calendar size={11} /> To</label>
               <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="fmis-input" />
             </div>
-            <div className="sm:col-span-3 flex justify-end">
+            <div>
+              <label className="fmis-label flex items-center gap-1.5"><Wallet size={11} /> Account</label>
+              <select value={accountFilter} onChange={e => setAccountFilter(e.target.value)} className="fmis-select">
+                <option value="">All accounts</option>
+                {accounts.map(acc => (
+                  <option key={acc.id} value={acc.id}>{acc.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="fmis-label flex items-center gap-1.5"><Tag size={11} /> Category</label>
+              <select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)} className="fmis-select">
+                <option value="">All categories</option>
+                {categories.map(cat => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="sm:col-span-1 flex justify-end items-end pb-0.5">
               <button
-                onClick={() => { setTypeFilter(''); setDateFrom(''); setDateTo(''); setStatusFilter('') }}
+                onClick={() => { setTypeFilter(''); setDateFrom(''); setDateTo(''); setStatusFilter(''); setAccountFilter(''); setCategoryFilter('') }}
                 className="btn-ghost text-xs"
               >
                 Reset all filters

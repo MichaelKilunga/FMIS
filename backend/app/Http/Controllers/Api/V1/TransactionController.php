@@ -30,7 +30,13 @@ class TransactionController extends Controller
         if ($request->filled('type'))       $query->where('type', $request->type);
         if ($request->filled('status'))     $query->where('status', $request->status);
         if ($request->filled('category_id'))$query->where('category_id', $request->category_id);
-        if ($request->filled('account_id')) $query->where('account_id', $request->account_id);
+        if ($request->filled('account_id')) {
+            $accId = $request->account_id;
+            $query->where(function($q) use ($accId) {
+                $q->where('account_id', $accId)
+                  ->orWhere('to_account_id', $accId);
+            });
+        }
         if ($request->filled('from'))       $query->where('transaction_date', '>=', $request->from);
         if ($request->filled('to'))         $query->where('transaction_date', '<=', $request->to);
         if ($request->filled('search'))     $query->where('description', 'like', "%{$request->search}%");
