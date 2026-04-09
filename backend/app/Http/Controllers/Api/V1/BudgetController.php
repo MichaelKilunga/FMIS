@@ -40,6 +40,7 @@ class BudgetController extends Controller
 
         $data['tenant_id']  = $request->user()->tenant_id;
         $data['created_by'] = $request->user()->id;
+        $data['initial_amount'] = $data['amount'];
 
         $budget = Budget::create($data);
         $this->audit->logModelChange('budget_created', $budget);
@@ -69,6 +70,9 @@ class BudgetController extends Controller
         ]);
 
         $before = $budget->toArray();
+        if (isset($data['amount'])) {
+            $data['initial_amount'] = $data['amount'];
+        }
         $budget->update($data);
         $this->audit->logModelChange('budget_updated', $budget, $before);
 
@@ -81,5 +85,49 @@ class BudgetController extends Controller
         $this->audit->log('budget_deleted', $budget);
         $budget->delete();
         return response()->json(['message' => 'Budget deleted.']);
+    }
+
+    /**
+     * Recalculate 'spent' totals for all budgets of the tenant.
+     * Fixes historical data after logic changes.
+     */
+    public function sync(Request $request): JsonResponse
+    {
+        $tenantId = $request->user()->tenant_id;
+        $budgets = Budget::forTenant($tenantId)->where('status', 'active')->get();
+        $syncedCount = 0;
+
+        foreach ($budgets as $budget) {
+            // Reset to initial
+            $initial = (float) $budget->initial_amount;
+            
+            // Sum income linked to this budget
+            $income = \App\Models\Transaction::where('budget_id', $budget->id)
+                ->where('type', 'income')
+                ->where('status', '!=', \App\Models\Transaction::STATUS_REJECTED)
+                ->sum('amount');
+
+            // Set final limit
+            $newAmount = $initial + (float) $income;
+
+            // Sum expenses linked to this budget
+            $newSpent = \App\Models\Transaction::where('budget_id', $budget->id)
+                ->where('type', 'expense')
+                ->where('status', '!=', \App\Models\Transaction::STATUS_REJECTED)
+                ->sum('amount');
+
+            if ((float)$budget->spent !== (float)$newSpent || (float)$budget->amount !== $newAmount) {
+                $budget->update([
+                    'spent'  => $newSpent,
+                    'amount' => $newAmount,
+                ]);
+                $syncedCount++;
+            }
+        }
+
+        return response()->json([
+            'message' => "Successfully synced {$syncedCount} budgets based on historical transactions.",
+            'total_budgets' => count($budgets)
+        ]);
     }
 }

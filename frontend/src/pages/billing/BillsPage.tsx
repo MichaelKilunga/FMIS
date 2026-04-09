@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { billsApi, categoriesApi, accountsApi } from '../../services/api';
 import type { RecurringBill, BillStatus, BillType } from '../../types/bill';
 import type { TransactionCategory, Account, PaginatedResponse } from '../../types';
+import { useAuthStore } from '../../store';
 import { 
   Plus, Search, Loader2, Pencil, Trash2, Pause, Play, 
   Calendar, CreditCard, ArrowUpCircle, ArrowDownCircle,
@@ -15,6 +16,8 @@ import { useCurrency } from '../../hooks/useCurrency';
 
 export default function BillsPage() {
   const { formatCurrency } = useCurrency();
+  const { user } = useAuthStore();
+  const canManage = user?.permissions.includes('manage-bills');
   const [data, setData] = useState<PaginatedResponse<RecurringBill> | null>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -116,12 +119,14 @@ export default function BillsPage() {
           <h1 className="text-2xl font-bold text-white">Recurring Bills</h1>
           <p className="text-slate-400 text-sm">Automate your recurring income and expenses</p>
         </div>
-        <button 
-          onClick={() => { setSelectedBill(null); setIsModalOpen(true); }}
-          className="btn-primary"
-        >
-          <Plus size={16} /> New Bill
-        </button>
+        {canManage && (
+          <button 
+            onClick={() => { setSelectedBill(null); setIsModalOpen(true); }}
+            className="btn-primary"
+          >
+            <Plus size={16} /> New Bill
+          </button>
+        )}
       </div>
 
       {/* Summary Cards */}
@@ -244,30 +249,36 @@ export default function BillsPage() {
                   <td>{getStatusBadge(bill.status)}</td>
                   <td>
                     <div className="flex items-center gap-2">
-                      <button 
-                        onClick={() => handleToggleStatus(bill)}
-                        className={clsx(
-                          "p-2 rounded-lg transition-colors",
-                          bill.status === 'active' ? "text-amber-400 hover:bg-amber-900/20" : "text-emerald-400 hover:bg-emerald-900/20"
-                        )}
-                        title={bill.status === 'active' ? 'Pause' : 'Resume'}
-                      >
-                        {bill.status === 'active' ? <Pause size={16} /> : <Play size={16} />}
-                      </button>
-                      <button 
-                        onClick={() => { setSelectedBill(bill); setIsModalOpen(true); }}
-                        className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
-                        title="Edit"
-                      >
-                        <Pencil size={16} />
-                      </button>
-                      <button 
-                        onClick={() => handleDelete(bill.id)}
-                        className="p-2 text-rose-400 hover:bg-rose-900/20 rounded-lg transition-colors"
-                        title="Delete"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                      {canManage ? (
+                        <>
+                          <button 
+                            onClick={() => handleToggleStatus(bill)}
+                            className={clsx(
+                              "p-2 rounded-lg transition-colors",
+                              bill.status === 'active' ? "text-amber-400 hover:bg-amber-900/20" : "text-emerald-400 hover:bg-emerald-900/20"
+                            )}
+                            title={bill.status === 'active' ? 'Pause' : 'Resume'}
+                          >
+                            {bill.status === 'active' ? <Pause size={16} /> : <Play size={16} />}
+                          </button>
+                          <button 
+                            onClick={() => { setSelectedBill(bill); setIsModalOpen(true); }}
+                            className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
+                            title="Edit"
+                          >
+                            <Pencil size={16} />
+                          </button>
+                          <button 
+                            onClick={() => handleDelete(bill.id)}
+                            className="p-2 text-rose-400 hover:bg-rose-900/20 rounded-lg transition-colors"
+                            title="Delete"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </>
+                      ) : (
+                        <span className="text-[10px] text-slate-500 italic">View Only</span>
+                      )}
                     </div>
                   </td>
                 </tr>

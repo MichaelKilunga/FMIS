@@ -24,7 +24,7 @@ class WorkflowEngine
     /**
      * Find applicable workflow for a model and initiate approval process
      */
-    public function initiate(object $model, string $module = 'transaction'): ?Approval
+    public function initiate(object $model, string $module = 'transaction', bool $notify = true): ?Approval
     {
         $tenantId = $model->tenant_id;
 
@@ -74,7 +74,7 @@ class WorkflowEngine
     /**
      * Process an approval action (approve/reject)
      */
-    public function process(Approval $approval, string $action, string $comment = ''): Approval
+    public function process(Approval $approval, string $action, string $comment = '', bool $notify = true): Approval
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
@@ -92,8 +92,6 @@ class WorkflowEngine
         }
 
         // --- Segregation of Duties ---
-
-        // 1. No Self-Approval: The requester cannot approve their own submission
         $creatorId = $approval->approvable->created_by ?? null;
         $allowSelfApproval = $this->settings->get('approvals.allow_self_approval', false, $approval->tenant_id);
 
@@ -101,7 +99,6 @@ class WorkflowEngine
             throw new \Illuminate\Auth\Access\AuthorizationException("You cannot approve your own request.");
         }
 
-        // 2. One Person per Workflow: A user can only act on one step
         $alreadyActed = ApprovalLog::where('approval_id', $approval->id)
             ->where('user_id', $user->id)
             ->whereIn('action', ['approved', 'rejected'])
@@ -111,7 +108,7 @@ class WorkflowEngine
             throw new \Illuminate\Auth\Access\AuthorizationException("You have already acted on a previous step of this approval workflow.");
         }
 
-        return DB::transaction(function () use ($approval, $action, $comment, $step, $user) {
+        return DB::transaction(function () use ($approval, $action, $comment, $step, $user, $notify) {
             ApprovalLog::create([
                 'tenant_id'   => $approval->tenant_id,
                 'approval_id' => $approval->id,
@@ -125,7 +122,10 @@ class WorkflowEngine
                 $approval->update(['status' => 'rejected']);
                 $approval->approvable->update(['status' => Transaction::STATUS_REJECTED]);
                 $this->audit->log('approval_rejected', $approval->approvable, [], [], ['step' => $step->step_order]);
-                $this->notifyRequester($approval, 'rejected', $comment);
+                
+                if ($notify) {
+                    $this->notifyRequester($approval, 'rejected', $comment);
+                }
             } else {
                 // Find the next applicable step
                 $nextStep = $approval->workflow->steps()
@@ -137,18 +137,69 @@ class WorkflowEngine
                 if ($nextStep) {
                     $approval->update(['current_step' => $nextStep->step_order]);
                     $this->audit->log('approval_step_approved', $approval->approvable, [], [], ['step' => $step->step_order]);
-                    $this->notifyNextStep($approval);
+                    
+                    if ($notify) {
+                        $this->notifyNextStep($approval);
+                    }
                 } else {
                     // All steps approved
                     $approval->update(['status' => 'approved']);
                     $approval->approvable->update(['status' => Transaction::STATUS_APPROVED]);
                     $this->audit->log('approval_completed', $approval->approvable, [], [], []);
-                    $this->notifyRequester($approval, 'approved');
+                    
+                    if ($notify) {
+                        $this->notifyRequester($approval, 'approved');
+                    }
                 }
             }
 
             return $approval->fresh();
         });
+    }
+
+    public function notifyBulkAction(User $actor, int $count, string $action, array $approvals = []): void
+    {
+        $verb = $action === 'approve' ? 'approved' : ($action === 'submit' ? 'submitted' : 'rejected');
+        
+        // 1. Notify the Actor
+        $this->notifications->send(
+            users: $actor,
+            title: "Bulk Action: success",
+            content: "You have successfully {$verb} {$count} items.",
+            featureKey: 'approvals',
+            type: 'success'
+        );
+
+        // 2. If it's a submission or approval, find and notify NEXT people in summary
+        if (($action === 'submit' || $action === 'approve') && !empty($approvals)) {
+            $roleCounts = [];
+            foreach ($approvals as $approval) {
+                if ($approval->status === 'pending' || $approval->status === 'under_review') {
+                    $step = $approval->currentStep();
+                    if ($step && $step->role_name) {
+                        $roleCounts[$step->role_name] = ($roleCounts[$step->role_name] ?? 0) + 1;
+                    }
+                }
+            }
+
+            foreach ($roleCounts as $roleName => $num) {
+                try {
+                    $usersToNotify = User::forTenant($actor->tenant_id)->role($roleName)->get();
+                    if ($usersToNotify->isNotEmpty()) {
+                        $this->notifications->send(
+                            users: $usersToNotify,
+                            title: "Action Required: Batch Approval",
+                            content: "You have {$num} new items awaiting your approval at the '{$roleName}' step.",
+                            featureKey: 'approvals',
+                            action: ['label' => 'View Approvals', 'url' => "/approvals"],
+                            type: 'warning'
+                        );
+                    }
+                } catch (\Exception $e) {
+                    Log::warning("Could not send bulk notification to role {$roleName}: " . $e->getMessage());
+                }
+            }
+        }
     }
 
     protected function notifyNextStep(Approval $approval): void

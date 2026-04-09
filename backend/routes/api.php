@@ -65,6 +65,7 @@ Route::group(['prefix' => 'v1'], function () {
         Route::apiResource('users', UserController::class)->middleware('can:manage-users');
 
         // Accounts
+        Route::post('accounts/transfer', [AccountController::class, 'transfer']);
         Route::apiResource('accounts', AccountController::class);
 
         // Transaction Categories
@@ -87,7 +88,9 @@ Route::group(['prefix' => 'v1'], function () {
         // Transactions
         Route::apiResource('transactions', TransactionController::class);
         Route::post('transactions/{transaction}/submit', [TransactionController::class, 'submit']);
+        Route::post('transactions/bulk-submit', [TransactionController::class, 'bulkSubmit']);
         Route::post('transactions/{transaction}/post', [TransactionController::class, 'post']);
+        Route::post('transactions/{transaction}/revert', [TransactionController::class, 'revert']);
 
         // Attendances
         Route::prefix('attendances')->group(function () {
@@ -122,6 +125,7 @@ Route::group(['prefix' => 'v1'], function () {
         // Budgets
         Route::get('budgets', [BudgetController::class, 'index']);
         Route::get('budgets/{budget}', [BudgetController::class, 'show']);
+        Route::post('budgets/sync', [BudgetController::class, 'sync'])->middleware('can:manage-budgets');
         Route::post('budgets', [BudgetController::class, 'store'])->middleware('can:manage-budgets');
         Route::put('budgets/{budget}', [BudgetController::class, 'update'])->middleware('can:manage-budgets');
         Route::delete('budgets/{budget}', [BudgetController::class, 'destroy'])->middleware('can:manage-budgets');

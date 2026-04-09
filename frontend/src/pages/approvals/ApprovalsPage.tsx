@@ -136,27 +136,38 @@ export default function ApprovalsPage() {
 
     try {
       if (modal.action === 'resolve') {
-        const id = modal.id!
+        const id = targetIds[0]
         await approvalsApi.resolve(id, resolveAction, comment)
         succeededIds.push(id)
         toast.success(`Request administratively ${resolveAction}`)
-      } else {
-        // Bulk or Single Approve/Reject logic
-        const batchSize = isBulk ? 3 : 1
-        for (let i = 0; i < targetIds.length; i += batchSize) {
-          const batch = targetIds.slice(i, i + batchSize)
-          await Promise.all(batch.map(async (id) => {
-            try {
-              if (modal.action === 'approve') await approvalsApi.approve(id, comment || undefined)
-              else await approvalsApi.reject(id, comment)
-              succeededIds.push(id)
-              setProgress(prev => ({ ...prev, current: prev.current + 1 }))
-            } catch (e) {
-              console.error(`ID #${id} failed:`, e)
-            }
-          }))
+      } else if (isBulk) {
+        // --- Enhanced Bulk API Integration ---
+        try {
+          const resp = await approvalsApi.bulk(targetIds, modal.action === 'approve' ? 'approve' : 'reject', comment)
+          const { succeeded, failed } = resp.data.results
+          succeededIds.push(...succeeded)
+          
+          if (succeeded.length > 0) {
+            toast.success(`${succeeded.length} items processed successfully`)
+          }
+          if (failed.length > 0) {
+            toast.error(`${failed.length} items failed to process`)
+          }
+        } catch (err: any) {
+          setActionError(err.response?.data?.message || 'Bulk action failed')
+          setActing(false)
+          return
         }
-        if (succeededIds.length > 0) toast.success(`${succeededIds.length} items processed`)
+      } else {
+        // Single Approve/Reject logic
+        try {
+          if (modal.action === 'approve') await approvalsApi.approve(targetIds[0], comment || undefined)
+          else await approvalsApi.reject(targetIds[0], comment)
+          succeededIds.push(targetIds[0])
+          toast.success('Item processed')
+        } catch (e) {
+          console.error(`ID #${targetIds[0]} failed:`, e)
+        }
       }
 
       // Update Local Table State

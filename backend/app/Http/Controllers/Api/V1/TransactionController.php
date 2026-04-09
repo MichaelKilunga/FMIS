@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Transaction;
+use App\Models\Approval;
 use App\Services\TransactionService;
 use App\Services\AuditService;
+use App\Services\WorkflowEngine;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -13,6 +15,7 @@ class TransactionController extends Controller
 {
     public function __construct(
         protected TransactionService $transactionService,
+        protected WorkflowEngine $workflowEngine,
         protected AuditService $audit
     ) {}
 
@@ -136,7 +139,7 @@ class TransactionController extends Controller
             }
         }
 
-        $transaction->update($data);
+        $transaction = $this->transactionService->update($transaction, $data);
         $this->audit->logModelChange('transaction_updated', $transaction, $before);
 
         return response()->json($transaction->fresh(['category', 'account', 'createdBy']));
@@ -150,7 +153,7 @@ class TransactionController extends Controller
         }
 
         $this->audit->log('transaction_deleted', $transaction);
-        $transaction->delete();
+        $this->transactionService->delete($transaction);
 
         return response()->json(['message' => 'Transaction deleted successfully.']);
     }
@@ -168,6 +171,51 @@ class TransactionController extends Controller
         }
     }
 
+    public function bulkSubmit(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'exists:transactions,id',
+        ]);
+
+        $user = $request->user();
+        $results = ['succeeded' => [], 'failed' => [], 'skipped' => []];
+
+        foreach ($data['ids'] as $id) {
+            $transaction = Transaction::find($id);
+            if (!$transaction || $transaction->tenant_id !== $user->tenant_id) {
+                $results['skipped'][] = ['id' => $id, 'reason' => 'Unauthorized or not found'];
+                continue;
+            }
+
+            if ($transaction->status !== Transaction::STATUS_DRAFT) {
+                $results['skipped'][] = ['id' => $id, 'reason' => 'Not in draft status'];
+                continue;
+            }
+
+            try {
+                $this->transactionService->submit($transaction, false); // Disable individual notifications
+                $results['succeeded'][] = $id;
+            } catch (\Exception $e) {
+                $results['failed'][] = ['id' => $id, 'reason' => $e->getMessage()];
+            }
+        }
+
+        $successCount = count($results['succeeded']);
+        if ($successCount > 0) {
+            $approvals = Approval::whereIn('approvable_id', $results['succeeded'])
+                ->where('approvable_type', Transaction::class)
+                ->get();
+            
+            $this->workflowEngine->notifyBulkAction($user, $successCount, 'submit', $approvals->all());
+        }
+
+        return response()->json([
+            'message' => "{$successCount} transactions submitted successfully.",
+            'results' => $results
+        ]);
+    }
+
     public function post(Request $request, Transaction $transaction): JsonResponse
     {
         $this->authorizeForTenant($request, $transaction);
@@ -176,6 +224,38 @@ class TransactionController extends Controller
         }
         $transaction = $this->transactionService->post($transaction);
         return response()->json($transaction);
+    }
+
+    public function revert(Request $request, Transaction $transaction): JsonResponse
+    {
+        $this->authorizeForTenant($request, $transaction);
+
+        // Security: Only Admin or users with specific permission can rollback
+        if (!$request->user()->hasRole('admin') && !$request->user()->can('manage-workflows')) {
+            return response()->json(['message' => 'Unauthorized. Administrative rollback required.'], 403);
+        }
+
+        $beforeStatus = $transaction->status;
+
+        // Reset Transaction to Draft
+        $transaction->update(['status' => Transaction::STATUS_DRAFT]);
+
+        // Clean up associated Approval workflow if it exists
+        if ($transaction->approval) {
+            // Delete logs first then the approval
+            $transaction->approval->logs()->delete();
+            $transaction->approval->delete();
+        }
+
+        $this->audit->log('transaction_reverted_to_draft', $transaction, [
+            'previous_status' => $beforeStatus,
+            'reason'          => $request->input('reason', 'Administrative Rollback'),
+        ]);
+
+        return response()->json([
+            'message'     => 'Transaction reverted to draft successfully.',
+            'transaction' => $transaction->fresh(['category', 'account', 'createdBy'])
+        ]);
     }
 
     protected function authorizeForTenant(Request $request, Transaction $transaction): void

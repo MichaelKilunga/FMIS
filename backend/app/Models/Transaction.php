@@ -62,6 +62,11 @@ class Transaction extends Model
         return $this->belongsTo(Account::class);
     }
 
+    public function toAccount()
+    {
+        return $this->belongsTo(Account::class, 'to_account_id');
+    }
+
     public function budget()
     {
         return $this->belongsTo(Budget::class);

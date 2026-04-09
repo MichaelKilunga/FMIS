@@ -160,7 +160,8 @@ class ApprovalController extends Controller
                 $this->workflowEngine->process(
                     $approval,
                     $data['action'] === 'approve' ? 'approved' : 'rejected',
-                    $data['comment'] ?? ''
+                    $data['comment'] ?? '',
+                    false // Disable individual notifications
                 );
                 $results['succeeded'][] = $id;
             } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
@@ -173,6 +174,12 @@ class ApprovalController extends Controller
         $successCount = count($results['succeeded']);
         $skipCount    = count($results['skipped']);
         $failCount    = count($results['failed']);
+
+        if ($successCount > 0) {
+            // Fetch the updated approval objects to determine their current steps for notifications
+            $processedApprovals = \App\Models\Approval::whereIn('id', $results['succeeded'])->get();
+            $this->workflowEngine->notifyBulkAction($user, $successCount, $data['action'], $processedApprovals->all());
+        }
 
         $message = "{$successCount} " . ($data['action'] === 'approve' ? 'approved' : 'rejected') . " successfully.";
         if ($skipCount) $message .= " {$skipCount} skipped.";

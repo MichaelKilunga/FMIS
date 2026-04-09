@@ -7,8 +7,13 @@ use App\Models\Account;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
+use App\Services\TransactionService;
+
 class AccountController extends Controller
 {
+    public function __construct(
+        protected TransactionService $transactionService
+    ) {}
     public function index(Request $request): JsonResponse
     {
         $tenantId = $request->user()->tenant_id;
@@ -64,6 +69,60 @@ class AccountController extends Controller
         $account->update($data);
 
         return response()->json($account);
+    }
+
+    public function transfer(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'from_account_id' => 'required|exists:accounts,id',
+            'to_account_id'   => 'required|exists:accounts,id|different:from_account_id',
+            'amount'          => 'required|numeric|min:0.01',
+            'description'     => 'nullable|string|max:500',
+            'transaction_date'=> 'required|date',
+        ]);
+
+        $tenantId = $request->user()->tenant_id;
+        
+        // Verify both accounts belong to the tenant
+        $fromAccount = Account::where('tenant_id', $tenantId)->findOrFail($data['from_account_id']);
+        $toAccount = Account::where('tenant_id', $tenantId)->findOrFail($data['to_account_id']);
+
+        // Check if fromAccount has enough balance
+        if ($fromAccount->balance < $data['amount']) {
+            return response()->json([
+                'message' => 'Insufficient funds in the source account.',
+                'errors' => ['amount' => ['Insufficient balance']]
+            ], 422);
+        }
+
+        $txnData = [
+            'tenant_id'        => $tenantId,
+            'amount'           => $data['amount'],
+            'type'             => 'transfer',
+            'account_id'       => $data['from_account_id'],
+            'to_account_id'    => $data['to_account_id'],
+            'created_by'       => $request->user()->id,
+            'description'      => $data['description'] ?? "Transfer from {$fromAccount->name} to {$toAccount->name}",
+            'transaction_date' => $data['transaction_date'],
+            'status'           => \App\Models\Transaction::STATUS_POSTED, // Transfers are usually immediate? Or should they follow workflow?
+            // If the user wants workflow, we should set it to DRAFT and call submit.
+            // But usually account transfers by admin are direct. 
+            // Let's make it POSTED for now to simplify, or follow what the user might expect.
+            // The request says "allow tenants admin make funds transfer", admins usually have power.
+        ];
+
+        // Normalize date
+        $txnData['transaction_date'] = \Illuminate\Support\Carbon::parse($txnData['transaction_date'])->toDateString();
+
+        try {
+            $transaction = $this->transactionService->create($txnData);
+            return response()->json([
+                'message' => 'Funds transferred successfully.',
+                'transaction' => $transaction->load(['account', 'createdBy'])
+            ], 201);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Transfer failed: ' . $e->getMessage()], 500);
+        }
     }
 
     public function destroy(Request $request, $id): JsonResponse

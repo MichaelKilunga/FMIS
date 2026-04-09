@@ -1,5 +1,5 @@
 import type { RecurringBill, CreateBillData, UpdateBillData } from '../types/bill';
-import type { ProductivityStats, ForecastDataPoint, FinancialHealth } from '../types';
+import type { ProductivityStats, ForecastDataPoint, FinancialHealth, TransferFundsData } from '../types';
 import axios from 'axios'
 
 const api = axios.create({
@@ -176,7 +176,9 @@ export const transactionsApi = {
   update: (id: number, data: Record<string, unknown>) => api.put(`/transactions/${id}`, data),
   delete: (id: number) => api.delete(`/transactions/${id}`),
   submit: (id: number) => api.post(`/transactions/${id}/submit`),
+  bulkSubmit: (ids: number[]) => api.post('/transactions/bulk-submit', { ids }),
   post: (id: number) => api.post(`/transactions/${id}/post`),
+  revert: (id: number, reason?: string) => api.post(`/transactions/${id}/revert`, { reason }),
 }
 
 export const categoriesApi = {
@@ -186,13 +188,13 @@ export const categoriesApi = {
   update: (id: number, data: Record<string, unknown>) => api.put(`/transaction-categories/${id}`, data),
   delete: (id: number) => api.delete(`/transaction-categories/${id}`),
 }
-
 export const accountsApi = {
   list: () => api.get('/accounts'),
   get: (id: number) => api.get(`/accounts/${id}`),
   create: (data: Record<string, unknown>) => api.post('/accounts', data),
   update: (id: number, data: Record<string, unknown>) => api.put(`/accounts/${id}`, data),
   delete: (id: number) => api.delete(`/accounts/${id}`),
+  transfer: (data: TransferFundsData) => api.post('/accounts/transfer', data),
 }
 
 export const approvalsApi = {
@@ -200,7 +202,7 @@ export const approvalsApi = {
   get: (id: number) => api.get(`/approvals/${id}`),
   approve: (id: number, comment?: string) => api.post(`/approvals/${id}/approve`, { comment }),
   reject: (id: number, comment: string) => api.post(`/approvals/${id}/reject`, { comment }),
-  bulkAction: (ids: number[], action: 'approve' | 'reject', comment?: string) =>
+  bulk: (ids: number[], action: 'approve' | 'reject', comment?: string) =>
     api.post('/approvals/bulk-action', { ids, action, comment }),
   resolve: (id: number, action: 'approved' | 'rejected', comment: string) =>
     api.post(`/approvals/${id}/resolve`, { action, comment }),
@@ -223,6 +225,7 @@ export const budgetsApi = {
   create: (data: Record<string, unknown>) => api.post('/budgets', data),
   update: (id: number, data: Record<string, unknown>) => api.put(`/budgets/${id}`, data),
   delete: (id: number) => api.delete(`/budgets/${id}`),
+  sync: () => api.post('/budgets/sync'),
 }
 
 export const analyticsApi = {

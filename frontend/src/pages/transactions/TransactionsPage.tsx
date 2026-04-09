@@ -1,18 +1,15 @@
 import { useEffect, useState, useCallback } from 'react'
 import { transactionsApi, budgetsApi, categoriesApi, accountsApi } from '../../services/api'
 import type { Transaction, PaginatedResponse, Budget, TransactionCategory, Account } from '../../types'
-import {
-  Plus, Search, Send, Loader2, Pencil, Trash2, Tag, Building2,
-  Wallet, PieChart, Calendar, Filter, CheckCircle, AlertTriangle, RefreshCw,
-} from 'lucide-react'
+import { useOnlineStore, useSettingsStore, useAuthStore } from '../../store'
+import { useCurrency } from '../../hooks/useCurrency'
+import Modal from '../../components/Modal'
+import { RotateCcw, Plus, Search, Send, Loader2, Pencil, Trash2, Tag, Building2, Wallet, PieChart, Calendar, Filter, CheckCircle, AlertTriangle, RefreshCw } from 'lucide-react'
+import { useForm, type UseFormReturn } from 'react-hook-form'
+import DataTable from '../../components/DataTable'
 import toast from 'react-hot-toast'
 import { format } from 'date-fns'
 import clsx from 'clsx'
-import { useOnlineStore, useSettingsStore } from '../../store'
-import { useCurrency } from '../../hooks/useCurrency'
-import Modal from '../../components/Modal'
-import { useForm, type UseFormReturn } from 'react-hook-form'
-import DataTable from '../../components/DataTable'
 
 const statusMeta: Record<string, { label: string; cls: string }> = {
   draft:        { label: 'Draft',       cls: 'badge-draft' },
@@ -39,7 +36,9 @@ type TxFormData = {
 export default function TransactionsPage() {
   const { isOnline } = useOnlineStore()
   const { settings } = useSettingsStore()
+  const { user } = useAuthStore()
   const { formatCurrency, defaultCurrency } = useCurrency()
+  const isAdmin = user?.roles.includes('admin') || user?.permissions.includes('manage-workflows')
   const multiEnabled = settings['currency.multi_enabled'] === 'true'
   const manualRatesStr = (settings['currency.manual_rates'] as string) || '{}'
 
@@ -75,6 +74,8 @@ export default function TransactionsPage() {
   const [budgets, setBudgets] = useState<Budget[]>([])
   const [categories, setCategories] = useState<TransactionCategory[]>([])
   const [accounts, setAccounts] = useState<Account[]>([])
+  const [selectedIds, setSelectedIds] = useState<number[]>([])
+  const [isBulkSubmitting, setIsBulkSubmitting] = useState(false)
 
   const createForm = useForm<TxFormData>({
     defaultValues: {
@@ -164,6 +165,18 @@ export default function TransactionsPage() {
     }
   }
 
+  const handleRevert = async (tx: Transaction) => {
+    if (!window.confirm('Are you sure you want to revert this transaction to draft? Existing approvals will be cleared.')) return
+    
+    try {
+      const res = await transactionsApi.revert(tx.id)
+      toast.success(res.data.message)
+      load(currentPage)
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || 'Rollback failed')
+    }
+  }
+
   const onCreateSubmit = async (formData: TxFormData) => {
     setIsSubmittingForm(true)
     try {
@@ -242,9 +255,71 @@ export default function TransactionsPage() {
   const fmt = (n: number, currency?: string) => formatCurrency(n, currency)
   const isEditable = (status: string) => ['draft', 'rejected'].includes(status)
 
+  const handleBulkSubmit = async () => {
+    if (selectedIds.length === 0) return
+    if (!window.confirm(`Are you sure you want to submit ${selectedIds.length} transactions for approval?`)) return
+    
+    setIsBulkSubmitting(true)
+    try {
+      const resp = await transactionsApi.bulkSubmit(selectedIds)
+      const { succeeded, failed } = resp.data.results
+      if (succeeded.length > 0) {
+        toast.success(`${succeeded.length} transactions submitted successfully.`)
+      }
+      if (failed.length > 0) {
+        toast.error(`${failed.length} submissions failed.`)
+      }
+      setSelectedIds([])
+      load(currentPage)
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || 'Failed to submit transactions')
+    } finally {
+      setIsBulkSubmitting(false)
+    }
+  }
+
+  const toggleSelect = (id: number) => {
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    )
+  }
+
+  const toggleSelectAll = () => {
+    if (!data?.data) return
+    const draftIds = data.data
+      .filter(tx => tx.status === 'draft')
+      .map(tx => tx.id)
+    
+    if (draftIds.length > 0 && selectedIds.length === draftIds.length) {
+      setSelectedIds([])
+    } else {
+      setSelectedIds(draftIds)
+    }
+  }
+
   const activeFiltersCount = [statusFilter, typeFilter, dateFrom, dateTo].filter(Boolean).length
 
   const columns = [
+    {
+      header: (
+        <input
+          type="checkbox"
+          className="fmis-checkbox"
+          checked={data?.data ? (data.data.filter(tx => tx.status === 'draft').length > 0 && selectedIds.length === data.data.filter(tx => tx.status === 'draft').length) : false}
+          onChange={toggleSelectAll}
+        />
+      ),
+      accessor: (tx: Transaction) => (
+        <input
+          type="checkbox"
+          className="fmis-checkbox"
+          checked={selectedIds.includes(tx.id)}
+          onChange={() => toggleSelect(tx.id)}
+          disabled={tx.status !== 'draft'}
+        />
+      ),
+      priority: 1,
+    },
     {
       header: 'Reference',
       priority: 4,
@@ -342,6 +417,15 @@ export default function TransactionsPage() {
               className="p-1.5 rounded-md text-rose-400 hover:bg-rose-900/30 transition-colors"
             >
               <Trash2 size={14} />
+            </button>
+          )}
+          {isAdmin && tx.status !== 'draft' && (
+            <button
+              onClick={() => handleRevert(tx)}
+              title="Admin: Revert to Draft"
+              className="p-1.5 rounded-md text-amber-500 hover:bg-amber-900/30 transition-colors"
+            >
+              <RotateCcw size={14} />
             </button>
           )}
         </div>
@@ -483,6 +567,26 @@ export default function TransactionsPage() {
           <p className="text-slate-400 text-sm">Manage all financial transactions</p>
         </div>
         <div className="flex items-center gap-2">
+          {selectedIds.length > 0 && (
+            <div className="flex items-center gap-2 mr-4 px-3 py-1.5 bg-blue-900/20 border border-blue-800/40 rounded-lg animate-in slide-in-from-right-4">
+              <span className="text-blue-300 text-sm font-medium">{selectedIds.length} selected</span>
+              <button
+                onClick={handleBulkSubmit}
+                disabled={isBulkSubmitting}
+                className="flex items-center gap-1.5 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-xs font-semibold transition-all disabled:opacity-50"
+              >
+                {isBulkSubmitting ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
+                Submit Selected
+              </button>
+              <button
+                onClick={() => setSelectedIds([])}
+                className="text-slate-400 hover:text-white transition-colors"
+                title="Clear selection"
+              >
+                <RefreshCw size={12} />
+              </button>
+            </div>
+          )}
           <button
             onClick={() => load(currentPage)}
             disabled={loading}

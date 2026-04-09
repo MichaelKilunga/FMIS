@@ -12,12 +12,13 @@ class Budget extends Model
 
     protected $fillable = [
         'tenant_id', 'category_id', 'created_by', 'department', 'name',
-        'amount', 'spent', 'alert_threshold', 'period', 'start_date', 'end_date', 'status', 'notes',
+        'initial_amount', 'amount', 'spent', 'alert_threshold', 'period', 'start_date', 'end_date', 'status', 'notes',
     ];
 
     protected $appends = ['variance', 'usage_percentage'];
 
     protected $casts = [
+        'initial_amount'  => 'decimal:2',
         'amount'          => 'decimal:2',
         'spent'           => 'decimal:2',
         'alert_threshold' => 'decimal:2',

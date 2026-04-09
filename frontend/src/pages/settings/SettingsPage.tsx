@@ -214,14 +214,20 @@ export default function SettingsPage() {
                   <p className="text-slate-500 text-[10px]">Permit users to approve their own transactions</p>
                 </div>
                 <button onClick={async () => {
+                  const current = String(settings['approvals.allow_self_approval']) === 'true'
+                  const newValue = !current
+                  // Optimistic update
+                  setSettings({ ...settings, 'approvals.allow_self_approval': String(newValue) })
                   try {
-                    const current = settings['approvals.allow_self_approval'] === 'true'
-                    await settingsApi.set('approvals.allow_self_approval', !current, 'approvals', 'boolean')
-                    const res = await settingsApi.all(); setSettings(res.data); toast.success('Policy updated')
-                  } catch { toast.error('Failed to update policy') }
+                    await settingsApi.set('approvals.allow_self_approval', newValue, 'approvals', 'boolean')
+                    const res = await settingsApi.all(); setSettings(res.data); toast.success(`Policy ${newValue ? 'enabled' : 'disabled'}`)
+                  } catch { 
+                    setSettings({ ...settings, 'approvals.allow_self_approval': String(current) })
+                    toast.error('Failed to update policy') 
+                  }
                 }}
-                  className={clsx('transition-colors', settings['approvals.allow_self_approval'] === 'true' ? 'text-blue-400' : 'text-slate-600')}>
-                  {settings['approvals.allow_self_approval'] === 'true' ? <ToggleRight size={28} /> : <ToggleLeft size={28} />}
+                  className={clsx('transition-all transform active:scale-90', String(settings['approvals.allow_self_approval']) === 'true' ? 'text-blue-400' : 'text-slate-600')}>
+                  {String(settings['approvals.allow_self_approval']) === 'true' ? <ToggleRight size={28} /> : <ToggleLeft size={28} />}
                 </button>
               </div>
             </div>

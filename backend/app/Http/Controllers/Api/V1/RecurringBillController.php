@@ -14,6 +14,10 @@ class RecurringBillController extends Controller
 
     public function index(Request $request): JsonResponse
     {
+        if (!$request->user()->can('view-bills') && !$request->user()->can('manage-bills')) {
+            abort(403, 'You do not have permission to view bills.');
+        }
+
         $tenantId = $request->user()->tenant_id;
         $query = RecurringBill::forTenant($tenantId)
             ->with(['category', 'account', 'createdBy'])
@@ -63,6 +67,10 @@ class RecurringBillController extends Controller
 
     public function show(Request $request, RecurringBill $recurringBill): JsonResponse
     {
+        if (!$request->user()->can('view-bills') && !$request->user()->can('manage-bills')) {
+            abort(403, 'You do not have permission to view bills.');
+        }
+
         $this->authorizeForTenant($request, $recurringBill);
         return response()->json($recurringBill->load(['category', 'account', 'createdBy']));
     }

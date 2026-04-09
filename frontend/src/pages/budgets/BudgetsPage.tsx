@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { budgetsApi, categoriesApi } from '../../services/api'
 import type { Budget, PaginatedResponse, TransactionCategory } from '../../types'
-import { Plus, Loader2, AlertTriangle, Calendar, Building2, Tag, Pencil, Trash2 } from 'lucide-react'
+import { Plus, Loader2, AlertTriangle, Calendar, Building2, Tag, Pencil, Trash2, RefreshCw } from 'lucide-react'
 import clsx from 'clsx'
 import toast from 'react-hot-toast'
 import Modal from '../../components/Modal'
@@ -32,6 +32,7 @@ export default function BudgetsPage() {
   const [editBudget, setEditBudget] = useState<Budget | null>(null)
   const [deleteBudget, setDeleteBudget] = useState<Budget | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [isSyncing, setIsSyncing] = useState(false)
 
   const createForm = useForm<BudgetFormData>({
     defaultValues: { 
@@ -138,6 +139,19 @@ export default function BudgetsPage() {
     }
   }
 
+  const handleSync = async () => {
+    setIsSyncing(true)
+    try {
+      const res = await budgetsApi.sync()
+      toast.success(res.data.message)
+      load(currentPage)
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || 'Sync failed')
+    } finally {
+      setIsSyncing(false)
+    }
+  }
+
   const fmt = (n: number | null | undefined) => formatCurrency(n, undefined, true)
 
   const budgetFormFields = (form: UseFormReturn<BudgetFormData>) => (
@@ -209,11 +223,24 @@ export default function BudgetsPage() {
           <h1 className="text-2xl font-bold text-white">Budgets</h1>
           <p className="text-slate-400 text-sm">Track spending against budgeted amounts</p>
         </div>
-        {user?.roles?.includes('tenant-admin') && (
-          <button onClick={() => setShowForm(true)} className="btn-primary">
-            <Plus size={16} /> New Budget
-          </button>
-        )}
+        <div className="flex gap-2">
+          {user?.roles?.includes('tenant-admin') && (
+            <>
+              <button 
+                onClick={handleSync} 
+                disabled={isSyncing} 
+                title="Recalculate budget totals based on all transactions"
+                className="btn-ghost border border-slate-700 hover:border-slate-500"
+              >
+                {isSyncing ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+                <span className="hidden sm:inline ml-2">Sync Totals</span>
+              </button>
+              <button onClick={() => setShowForm(true)} className="btn-primary">
+                <Plus size={16} /> <span className="hidden sm:inline ml-2">New Budget</span><span className="sm:hidden">New</span>
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {loading && !data ? (

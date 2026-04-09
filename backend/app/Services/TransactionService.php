@@ -26,9 +26,6 @@ class TransactionService
             // Update account balance
             $this->updateAccountBalance($transaction, 'credit');
 
-            // Update budget spending
-            $this->updateBudgetSpent($transaction);
-
             // Audit
             $this->audit->logModelChange('transaction_created', $transaction);
 
@@ -36,20 +33,31 @@ class TransactionService
         });
     }
 
-    public function submit(Transaction $transaction): Transaction
+    public function update(Transaction $transaction, array $data): Transaction
+    {
+        $transaction->update($data);
+        return $transaction->fresh();
+    }
+
+    public function delete(Transaction $transaction): void
+    {
+        $transaction->delete();
+    }
+
+    public function submit(Transaction $transaction, bool $notify = true): Transaction
     {
         if ($transaction->status !== Transaction::STATUS_DRAFT) {
             throw new \RuntimeException('Only draft transactions can be submitted.');
         }
 
-        return \Illuminate\Support\Facades\DB::transaction(function () use ($transaction) {
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($transaction, $notify) {
             $transaction->update(['status' => Transaction::STATUS_SUBMITTED]);
 
             // Run fraud detection before initiating workflow
             $this->fraudDetection->analyze($transaction);
 
             // Initiate approval workflow (may auto-approve if no workflow configured)
-            $this->workflow->initiate($transaction, 'transaction');
+            $this->workflow->initiate($transaction, 'transaction', $notify);
 
             $this->audit->log('transaction_submitted', $transaction);
 
@@ -78,43 +86,14 @@ class TransactionService
             $transaction->account()->decrement('balance', $amount);
         } elseif ($transaction->type === 'income') {
             $transaction->account()->increment('balance', $amount);
-        }
-    }
-
-    protected function updateBudgetSpent(Transaction $transaction): void
-    {
-        if ($transaction->type !== 'expense' || $transaction->status === Transaction::STATUS_REJECTED) return;
-
-        $query = Budget::where('tenant_id', $transaction->tenant_id)
-            ->where('status', 'active')
-            ->where('start_date', '<=', $transaction->transaction_date)
-            ->where('end_date', '>=', $transaction->transaction_date);
-
-        if ($transaction->budget_id) {
-            $query->where('id', $transaction->budget_id);
-        } else {
-            if (!$transaction->category_id) return;
-            $query->where('category_id', $transaction->category_id);
+        } elseif ($transaction->type === 'transfer' && $transaction->to_account_id) {
+            // Decrement from source
+            $transaction->account()->decrement('balance', $amount);
             
-            if ($transaction->department) {
-                $query->where(function($q) use ($transaction) {
-                    $q->where('department', $transaction->department)
-                      ->orWhereNull('department');
-                });
-            }
-        }
-
-        $budgets = $query->get();
-        foreach ($budgets as $budget) {
-            /** @var Budget $budget */
-            $budget->increment('spent', (float) $transaction->amount);
-            
-            // Trigger notification if threshold exceeded
-            $usage = ($budget->spent / $budget->amount) * 100;
-            if ($usage >= ($budget->alert_threshold ?? 80)) {
-                // In a real app, fire an event or send notification
-                // event(new \App\Events\BudgetThresholdExceeded($budget));
-                $this->notifyBudgetThreshold($budget, $usage);
+            // Increment to destination
+            $destinationAccount = \App\Models\Account::find($transaction->to_account_id);
+            if ($destinationAccount) {
+                $destinationAccount->increment('balance', $amount);
             }
         }
     }

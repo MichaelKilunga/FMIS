@@ -59,6 +59,14 @@ export interface Account {
   allowed_transaction_types?: ('income' | 'expense' | 'transfer')[]
 }
 
+export interface TransferFundsData {
+  from_account_id: string | number
+  to_account_id: string | number
+  amount: number
+  description?: string
+  transaction_date: string
+}
+
 export type TransactionStatus = 'draft' | 'submitted' | 'under_review' | 'approved' | 'rejected' | 'posted'
 
 export interface Transaction {

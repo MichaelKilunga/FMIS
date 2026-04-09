@@ -32,6 +32,7 @@ class DatabaseSeeder extends Seeder
             'manage-settings', 'manage-users',
             'manage-workflows',
             'view-debts', 'manage-debts',
+            'view-bills', 'manage-bills',
         ];
 
         foreach ($permissions as $permission) {
@@ -58,6 +59,7 @@ class DatabaseSeeder extends Seeder
             'view-reports', 'export-reports',
             'view-budgets',
             'view-analytics', 'view-debts', 'manage-debts',
+            'view-bills', 'manage-bills',
             'view-fraud-alerts',
             'view-audit-logs',
             'manage-users',
@@ -69,12 +71,13 @@ class DatabaseSeeder extends Seeder
             'view-transactions', 'create-transactions', 'edit-transactions', 'submit-transactions',
             'view-invoices', 'create-invoices',
             'view-reports', 'view-analytics', 'view-budgets', 'view-debts', 'manage-debts',
+            'view-bills', 'manage-bills',
         ]);
 
         // Staff: limited permissions
         $staff->syncPermissions([
             'view-transactions', 'create-transactions', 'submit-transactions',
-            'view-invoices', 'view-reports', 'view-budgets',
+            'view-invoices', 'view-reports', 'view-budgets', 'view-bills',
         ]);
 
         // 2. Demo Tenant

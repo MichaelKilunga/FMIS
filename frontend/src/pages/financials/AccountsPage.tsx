@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { accountsApi } from '../../services/api'
 import type { Account } from '../../types'
-import { Plus, Building2, Wallet, Smartphone, CreditCard, Loader2, Edit2, Trash2, CheckCircle2, XCircle } from 'lucide-react'
+import { Plus, Building2, Wallet, Smartphone, CreditCard, Loader2, Edit2, Trash2, CheckCircle2, XCircle, ArrowLeftRight } from 'lucide-react'
 import clsx from 'clsx'
 import toast from 'react-hot-toast'
 import Modal from '../../components/Modal'
@@ -35,11 +35,20 @@ interface AccountFormData {
   allowed_transaction_types: ('income' | 'expense' | 'transfer')[]
 }
 
+interface TransferFormData {
+  from_account_id: string
+  to_account_id: string
+  amount: number
+  description: string
+  transaction_date: string
+}
+
 export default function AccountsPage() {
   const [accounts, setAccounts] = useState<Account[]>([])
   const { formatCurrency, defaultCurrency } = useCurrency()
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
+  const [showTransferModal, setShowTransferModal] = useState(false)
   const [editingAccount, setEditingAccount] = useState<Account | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -50,6 +59,13 @@ export default function AccountsPage() {
       is_active: true,
       balance: 0,
       allowed_transaction_types: ['income', 'expense', 'transfer']
+    }
+  })
+
+  const { register: registerTransfer, handleSubmit: handleTransferSubmit, reset: resetTransfer, watch: watchTransfer } = useForm<TransferFormData>({
+    defaultValues: {
+      transaction_date: new Date().toISOString().split('T')[0],
+      description: ''
     }
   })
 
@@ -104,6 +120,15 @@ export default function AccountsPage() {
     setShowModal(true)
   }
 
+  const handleOpenTransfer = () => {
+    resetTransfer({
+      transaction_date: new Date().toISOString().split('T')[0],
+      description: '',
+      amount: 0,
+    })
+    setShowTransferModal(true)
+  }
+
   const onSubmit = async (data: AccountFormData) => {
     setIsSubmitting(true)
     try {
@@ -118,6 +143,20 @@ export default function AccountsPage() {
       loadAccounts()
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Operation failed')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const onTransferSubmit = async (data: TransferFormData) => {
+    setIsSubmitting(true)
+    try {
+      await accountsApi.transfer(data)
+      toast.success('Funds transferred successfully')
+      setShowTransferModal(false)
+      loadAccounts()
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Transfer failed')
     } finally {
       setIsSubmitting(false)
     }
@@ -232,9 +271,14 @@ export default function AccountsPage() {
           <h1 className="text-2xl font-bold text-white">Financial Accounts</h1>
           <p className="text-slate-400 text-sm">Manage your bank accounts, cash, and mobile money wallets</p>
         </div>
-        <button onClick={handleAddNew} className="btn-primary self-start sm:self-center">
-          <Plus size={16} /> Add Account
-        </button>
+        <div className="flex gap-2 self-start sm:self-center">
+          <button onClick={handleOpenTransfer} className="btn-secondary">
+            <ArrowLeftRight size={16} /> Transfer
+          </button>
+          <button onClick={handleAddNew} className="btn-primary">
+            <Plus size={16} /> Add Account
+          </button>
+        </div>
       </div>
 
       <DataTable
@@ -317,6 +361,71 @@ export default function AccountsPage() {
             <button type="button" onClick={() => setShowModal(false)} className="btn-ghost">Cancel</button>
             <button type="submit" disabled={isSubmitting} className="btn-primary">
               {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : (editingAccount ? 'Update Account' : 'Create Account')}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal isOpen={showTransferModal} onClose={() => setShowTransferModal(false)} title="Transfer Funds">
+        <form onSubmit={handleTransferSubmit(onTransferSubmit)} className="space-y-4">
+          <div className="space-y-4">
+            <div>
+              <label className="fmis-label">Source Account</label>
+              <select {...registerTransfer('from_account_id', { required: true })} className="fmis-select">
+                <option value="">Select source account</option>
+                {accounts.filter(acc => acc.is_active).map(acc => (
+                  <option key={acc.id} value={acc.id}>
+                    {acc.name} ({formatCurrency(acc.balance, acc.currency)})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="fmis-label">Destination Account</label>
+              <select {...registerTransfer('to_account_id', { required: true })} className="fmis-select">
+                <option value="">Select destination account</option>
+                {accounts.filter(acc => acc.is_active && acc.id.toString() !== watchTransfer('from_account_id')).map(acc => (
+                  <option key={acc.id} value={acc.id}>
+                    {acc.name} ({formatCurrency(acc.balance, acc.currency)})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="fmis-label">Amount</label>
+              <div className="relative">
+                <input 
+                  type="number" 
+                  step="0.01" 
+                  {...registerTransfer('amount', { required: true, min: 0.01 })} 
+                  className="fmis-input pr-12" 
+                  placeholder="0.00" 
+                />
+                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                  <span className="text-slate-500 text-sm">
+                    {accounts.find(a => a.id.toString() === watchTransfer('from_account_id'))?.currency || defaultCurrency}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label className="fmis-label">Transfer Date</label>
+              <input type="date" {...registerTransfer('transaction_date', { required: true })} className="fmis-input" />
+            </div>
+
+            <div>
+              <label className="fmis-label">Description (Optional)</label>
+              <input {...registerTransfer('description')} className="fmis-input" placeholder="e.g. Internal funds transfer" />
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-6 border-t border-slate-700/50 mt-4">
+            <button type="button" onClick={() => setShowTransferModal(false)} className="btn-ghost">Cancel</button>
+            <button type="submit" disabled={isSubmitting} className="btn-primary">
+              {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : 'Execute Transfer'}
             </button>
           </div>
         </form>

@@ -25,6 +25,7 @@ class AppServiceProvider extends ServiceProvider
         }
 
         \App\Models\Task::observe(\App\Observers\TaskObserver::class);
+        \App\Models\Transaction::observe(\App\Observers\TransactionObserver::class);
         
         \Illuminate\Auth\Notifications\VerifyEmail::createUrlUsing(function ($notifiable) {
             $frontendUrl = config('app.frontend_url');

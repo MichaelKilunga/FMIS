@@ -14,6 +14,7 @@ export default function WorkflowsPage() {
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [isSubmittingForm, setIsSubmittingForm] = useState(false)
+  const [isUpdatingPolicy, setIsUpdatingPolicy] = useState(false)
   const [selectedWorkflow, setSelectedWorkflow] = useState<ApprovalWorkflow | null>(null)
   const [steps, setSteps] = useState<any[]>([{ step_order: 1, role_name: 'director' }])
   const { settings, setSettings } = useSettingsStore()
@@ -132,17 +133,42 @@ export default function WorkflowsPage() {
              </div>
           </div>
           <button 
+            disabled={isUpdatingPolicy}
             onClick={async () => {
+              const current = String(settings['approvals.allow_self_approval']) === 'true'
+              const newValue = !current
+              
+              setIsUpdatingPolicy(true)
+              // Optimistic update
+              setSettings({ ...settings, 'approvals.allow_self_approval': String(newValue) })
+              
               try {
-                const current = settings['approvals.allow_self_approval'] === 'true'
-                await settingsApi.set('approvals.allow_self_approval', !current, 'approvals', 'boolean')
-                const res = await settingsApi.all(); setSettings(res.data); toast.success('Policy updated')
-              } catch { toast.error('Failed to update policy') }
+                await settingsApi.set('approvals.allow_self_approval', newValue, 'approvals', 'boolean')
+                const res = await settingsApi.all()
+                setSettings(res.data)
+                toast.success(`Self-approval ${newValue ? 'enabled' : 'disabled'}`)
+              } catch { 
+                // Rollback on error
+                setSettings({ ...settings, 'approvals.allow_self_approval': String(current) })
+                toast.error('Failed to update policy') 
+              } finally {
+                setIsUpdatingPolicy(false)
+              }
             }}
-            className={clsx('transition-all duration-300 transform active:scale-95', settings['approvals.allow_self_approval'] === 'true' ? 'text-blue-400' : 'text-slate-600')}
-            title={settings['approvals.allow_self_approval'] === 'true' ? 'Self-approval is ON' : 'Self-approval is OFF'}
+            className={clsx(
+              'transition-all duration-300 transform active:scale-90',
+              String(settings['approvals.allow_self_approval']) === 'true' ? 'text-blue-400' : 'text-slate-600',
+              isUpdatingPolicy && 'opacity-50 cursor-not-allowed'
+            )}
+            title={String(settings['approvals.allow_self_approval']) === 'true' ? 'Self-approval is ON' : 'Self-approval is OFF'}
           >
-            {settings['approvals.allow_self_approval'] === 'true' ? <ToggleRight size={32} /> : <ToggleLeft size={32} />}
+            {isUpdatingPolicy ? (
+               <Loader2 size={32} className="animate-spin text-blue-400/50" />
+            ) : (
+               String(settings['approvals.allow_self_approval']) === 'true' ? 
+               <ToggleRight size={32} className="drop-shadow-[0_0_8px_rgba(59,130,246,0.5)]" /> : 
+               <ToggleLeft size={32} />
+            )}
           </button>
         </div>
 
