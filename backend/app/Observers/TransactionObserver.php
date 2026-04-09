@@ -90,12 +90,24 @@ class TransactionObserver
 
     protected function adjustAccountBalanceUsingValues(?int $accountId, ?int $toAccountId, float $amount, string $type, string $status, bool $isReverse): void
     {
-        // If rejected, it shouldn't have an effect.
-        if ($status === Transaction::STATUS_REJECTED || $amount <= 0) {
+        // Only APPROVED or POSTED transactions should affect the permanent account balance.
+        // Draft/Submitted/Under Review transactions are pending and shouldn't change the ledger balance yet.
+        $affectsBalance = in_array($status, [Transaction::STATUS_APPROVED, Transaction::STATUS_POSTED]);
+
+        if (!$affectsBalance || $amount <= 0) {
             return;
         }
 
         $change = $isReverse ? -$amount : $amount;
+
+        Log::info("Adjusting Account Balance", [
+            'type' => $type,
+            'status' => $status,
+            'change' => $change,
+            'accountId' => $accountId,
+            'toAccountId' => $toAccountId,
+            'isReverse' => $isReverse
+        ]);
 
         if ($type === 'expense' && $accountId) {
             $account = \App\Models\Account::find($accountId);
@@ -117,8 +129,7 @@ class TransactionObserver
 
     protected function adjustBudgetUsingValues(int $tenantId, ?int $budgetId, float $amount, string $type, string $status, bool $isReverse): void
     {
-        // Only track draft, submitted, under_review, approved, or posted. 
-        // rejected is ignored.
+        // For Budgets, we track all non-REJECTED statuses to show committed/spent vs remaining.
         if ($status === Transaction::STATUS_REJECTED || !$budgetId || $amount <= 0) {
             return;
         }

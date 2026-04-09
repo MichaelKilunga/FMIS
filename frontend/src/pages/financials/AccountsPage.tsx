@@ -469,8 +469,7 @@ function AccountStatementModal({ account, onClose, categories }: { account: Acco
         category_id: categoryFilter,
         from: dateFrom,
         to: dateTo,
-        per_page: 100, // Load a good amount for the statement
-        status: 'posted', // Usually statements show finalized transactions
+        per_page: 100,
       })
       setTransactions(res.data.data)
     } catch {
