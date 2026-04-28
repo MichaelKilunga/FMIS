@@ -80,10 +80,18 @@ export default function SettingsPage() {
       setInvTemplate(data['invoice_template'] || 'modern')
       setInvStyle(data['invoice_style'] || 'light')
       setInvAccentColor(data['invoice_accent_color'] || '#3B82F6')
-      try {
-        const accounts = JSON.parse(data['invoice_accounts'] || '[]')
-        setInvAccounts(Array.isArray(accounts) ? accounts : [])
-      } catch { setInvAccounts([]) }
+      
+      const rawAccounts = data['invoice_accounts']
+      if (Array.isArray(rawAccounts)) {
+        setInvAccounts(rawAccounts)
+      } else if (typeof rawAccounts === 'string') {
+        try {
+          const parsed = JSON.parse(rawAccounts)
+          setInvAccounts(Array.isArray(parsed) ? parsed : [])
+        } catch { setInvAccounts([]) }
+      } else {
+        setInvAccounts([])
+      }
 
     }).catch(() => {}).finally(() => setLoading(false))
 

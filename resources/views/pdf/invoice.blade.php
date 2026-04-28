@@ -20,7 +20,7 @@
             display: table;
             width: 100%;
             margin-bottom: 30px;
-            border-bottom: 2px solid {{ $branding['primary_color'] ?? '#3B82F6' }};
+            border-bottom: 2px solid {{ $branding['invoice_accent_color'] ?? $branding['primary_color'] ?? '#3B82F6' }};
             padding-bottom: 20px;
         }
         .header-left { display: table-cell; vertical-align: top; width: 50%; }
@@ -30,7 +30,7 @@
         .company-name { 
             font-size: 18px; 
             font-weight: bold; 
-            color: {{ $branding['primary_color'] ?? '#3B82F6' }}; 
+            color: {{ $branding['invoice_accent_color'] ?? $branding['primary_color'] ?? '#3B82F6' }}; 
             margin-bottom: 5px;
             text-transform: uppercase;
         }
@@ -44,7 +44,7 @@
             text-transform: uppercase;
         }
         .invoice-meta { font-size: 11px; color: #333; }
-        .invoice-meta strong { color: {{ $branding['primary_color'] ?? '#3B82F6' }}; }
+        .invoice-meta strong { color: {{ $branding['invoice_accent_color'] ?? $branding['primary_color'] ?? '#3B82F6' }}; }
 
         .info-section {
             display: table;
@@ -70,7 +70,7 @@
             margin-bottom: 30px;
         }
         table.items-table thead th {
-            background: {{ $branding['primary_color'] ?? '#3B82F6' }};
+            background: {{ $branding['invoice_accent_color'] ?? $branding['primary_color'] ?? '#3B82F6' }};
             color: #fff;
             text-align: left;
             padding: 10px;
@@ -98,7 +98,7 @@
         .totals-table .label { font-weight: bold; color: #666; }
         .totals-table .value { font-weight: bold; text-align: right; }
         .totals-table .grand-total { 
-            background: {{ $branding['primary_color'] ?? '#3B82F6' }}; 
+            background: {{ $branding['invoice_accent_color'] ?? $branding['primary_color'] ?? '#3B82F6' }}; 
             color: #fff; 
             font-size: 14px;
         }
@@ -111,7 +111,7 @@
             border-radius: 4px;
             margin-bottom: 20px;
         }
-        .payment-title { font-size: 10px; font-weight: bold; margin-bottom: 8px; color: {{ $branding['primary_color'] ?? '#3B82F6' }}; text-transform: uppercase; }
+        .payment-title { font-size: 10px; font-weight: bold; margin-bottom: 8px; color: {{ $branding['invoice_accent_color'] ?? $branding['primary_color'] ?? '#3B82F6' }}; text-transform: uppercase; }
         .payment-detail { font-size: 10px; margin-bottom: 3px; }
 
         .notes-section { margin-bottom: 30px; }
@@ -143,7 +143,7 @@
             margin: 40px 20px 5px;
         }
         .sig-label { font-size: 9px; text-transform: uppercase; font-weight: bold; }
-        .sig-name { font-size: 11px; font-weight: bold; color: {{ $branding['primary_color'] ?? '#3B82F6' }}; }
+        .sig-name { font-size: 11px; font-weight: bold; color: {{ $branding['invoice_accent_color'] ?? $branding['primary_color'] ?? '#3B82F6' }}; }
 
         .badge {
             display: inline-block;
@@ -165,7 +165,9 @@
 
     <div class="header">
         <div class="header-left">
-            @if(!empty($branding['logo']))
+            @if(!empty($branding['logo_path']) && file_exists($branding['logo_path']))
+                <img src="{{ $branding['logo_path'] }}" class="logo" alt="{{ $branding['name'] }}">
+            @elseif(!empty($branding['logo']))
                 <img src="{{ $branding['logo'] }}" class="logo" alt="{{ $branding['name'] }}">
             @else
                 <div class="company-name">{{ $branding['name'] ?? $tenant->name }}</div>
@@ -252,7 +254,17 @@
 
     <div class="totals-section">
         <div class="totals-left">
-            @if(!empty($branding['lipa_name']) || !empty($branding['lipa_number']))
+            @php
+                $accounts = $branding['invoice_accounts'] ?? [];
+            @endphp
+            @if(!empty($accounts) && count($accounts) > 0)
+            <div class="payment-info">
+                <div class="payment-title">Payment Options:</div>
+                @foreach($accounts as $acc)
+                    <div class="payment-detail"><strong>{{ $acc['type'] ?? 'Account' }}:</strong> {{ $acc['name'] ?? '' }} - {{ $acc['number'] ?? '' }}</div>
+                @endforeach
+            </div>
+            @elseif(!empty($branding['lipa_name']) || !empty($branding['lipa_number']))
             <div class="payment-info">
                 <div class="payment-title">Payment Options:</div>
                 @if(!empty($branding['lipa_name']))

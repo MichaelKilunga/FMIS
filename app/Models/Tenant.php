@@ -61,6 +61,7 @@ class Tenant extends Model
             'secondary_color' => $this->secondary_color ?? '#0F172A',
             'accent_color'    => $this->accent_color ?? '#10B981',
             'logo'            => $this->logo ? asset('storage/' . $this->logo) : null,
+            'logo_path'       => $this->logo ? 'file:///' . str_replace('\\', '/', storage_path('app/public/' . $this->logo)) : null,
             'favicon'         => $this->favicon ? asset('storage/' . $this->favicon) : null,
             'name'            => $this->name,
             'email'           => $this->email,
@@ -76,6 +77,10 @@ class Tenant extends Model
             'website'         => $sets['website'] ?? parse_url(config('app.url'), PHP_URL_HOST),
             'city'            => $sets['city'] ?? 'Dar es Salaam',
             'country'         => $sets['country'] ?? 'Tanzania',
+            'invoice_template'     => $sets['invoice_template'] ?? 'modern',
+            'invoice_style'        => $sets['invoice_style'] ?? 'light',
+            'invoice_accent_color' => $sets['invoice_accent_color'] ?? '#3B82F6',
+            'invoice_accounts'     => $sets['invoice_accounts'] ?? [],
         ];
     }
 }
