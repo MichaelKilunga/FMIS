@@ -8,6 +8,7 @@ use App\Services\AuditService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
 class UserController extends Controller
@@ -124,5 +125,38 @@ class UserController extends Controller
         $this->audit->log('user_deleted', $user);
         $user->delete();
         return response()->json(['message' => 'User deleted.']);
+    }
+
+    /**
+     * List all available permissions (for the permission editor UI)
+     */
+    public function getPermissions(): JsonResponse
+    {
+        $permissions = Permission::orderBy('name')->pluck('name');
+        return response()->json($permissions);
+    }
+
+    /**
+     * Sync direct (user-level) permissions for a specific user.
+     * These override/extend the user's role defaults.
+     */
+    public function updatePermissions(Request $request, User $user): JsonResponse
+    {
+        if ($request->user()->tenant_id !== null) {
+            abort_if($user->tenant_id !== $request->user()->tenant_id, 403);
+        }
+
+        $data = $request->validate([
+            'permissions' => 'required|array',
+            'permissions.*' => 'string|exists:permissions,name',
+        ]);
+
+        $user->syncPermissions($data['permissions']);
+        $this->audit->log('user_permissions_updated', $user, [], ['permissions' => $data['permissions']]);
+
+        return response()->json([
+            'message' => 'Permissions updated.',
+            'permissions' => $user->getAllPermissions()->pluck('name'),
+        ]);
     }
 }

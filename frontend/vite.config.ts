@@ -52,10 +52,14 @@ export default defineConfig({
       },
     }),
   ],
+  build: {
+    outDir: '../public',
+    emptyOutDir: false,
+  },
   server: {
     proxy: {
       '/api': {
-        target: 'http://backend.test',
+        target: 'http://localhost:8000',
         changeOrigin: true,
       },
     },

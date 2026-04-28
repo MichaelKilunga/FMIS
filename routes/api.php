@@ -62,6 +62,8 @@ Route::group(['prefix' => 'v1'], function () {
         });
 
         // Users
+        Route::get('users/permissions', [UserController::class, 'getPermissions'])->middleware('can:manage-users');
+        Route::put('users/{user}/permissions', [UserController::class, 'updatePermissions'])->middleware('can:manage-users');
         Route::apiResource('users', UserController::class)->middleware('can:manage-users');
 
         // Accounts

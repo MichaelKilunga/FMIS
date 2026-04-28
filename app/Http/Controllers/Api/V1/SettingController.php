@@ -102,14 +102,18 @@ class SettingController extends Controller
         $isSystemWide = $request->boolean('is_system_wide') && $user->can('manage-tenants');
 
         $data = $request->validate([
-            'name'            => 'nullable|string|max:255',
-            'email'           => 'nullable|email|max:255',
-            'phone'           => 'nullable|string|max:100',
-            'address'         => 'nullable|string|max:1000',
-            'primary_color'   => 'nullable|string|max:20',
-            'secondary_color' => 'nullable|string|max:20',
-            'accent_color'    => 'nullable|string|max:20',
-            'is_system_wide'  => 'nullable|boolean',
+            'name'              => 'nullable|string|max:255',
+            'email'             => 'nullable|email|max:255',
+            'phone'             => 'nullable|string|max:100',
+            'address'           => 'nullable|string|max:1000',
+            'primary_color'     => 'nullable|string|max:20',
+            'secondary_color'   => 'nullable|string|max:20',
+            'accent_color'      => 'nullable|string|max:20',
+            'invoice_template'  => 'nullable|string|in:classic,modern,minimal,corporate',
+            'invoice_style'     => 'nullable|string|in:light,dark,branded',
+            'invoice_accent_color' => 'nullable|string|max:20',
+            'invoice_accounts'  => 'nullable|string', // JSON string of [{type,name,number}]
+            'is_system_wide'    => 'nullable|boolean',
         ]);
 
         if ($isSystemWide) {
@@ -152,7 +156,26 @@ class SettingController extends Controller
             $data['favicon'] = $request->file('favicon')->store("tenants/{$tenant->id}/favicons", 'public');
         }
 
-        $tenant->update($data);
+        // Persist tenant core fields
+        $tenantFields = array_intersect_key($data, array_flip([
+            'name', 'email', 'phone', 'address', 'primary_color', 'secondary_color', 'accent_color', 'logo', 'favicon'
+        ]));
+        $tenant->update($tenantFields);
+
+        // Persist invoice-specific settings
+        $invoiceSettingMap = [
+            'invoice_template'     => ['group' => 'invoice', 'type' => 'string'],
+            'invoice_style'        => ['group' => 'invoice', 'type' => 'string'],
+            'invoice_accent_color' => ['group' => 'invoice', 'type' => 'color'],
+            'invoice_accounts'     => ['group' => 'invoice', 'type' => 'json'],
+        ];
+
+        foreach ($invoiceSettingMap as $key => $meta) {
+            if (isset($data[$key])) {
+                $this->settings->set($key, $data[$key], $tenant->id, $meta['group'], $meta['type']);
+            }
+        }
+
         $this->audit->log('branding_updated', $tenant);
 
         return response()->json(['branding' => $tenant->fresh()->branding]);

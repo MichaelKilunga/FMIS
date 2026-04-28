@@ -282,6 +282,8 @@ export const usersApi = {
   create: (data: Record<string, unknown>) => api.post('/users', data),
   update: (id: number, data: Record<string, unknown>) => api.put(`/users/${id}`, data),
   delete: (id: number) => api.delete(`/users/${id}`),
+  getPermissions: () => api.get<string[]>('/users/permissions'),
+  updatePermissions: (id: number, permissions: string[]) => api.put(`/users/${id}/permissions`, { permissions }),
 }
 
 export const syncApi = {

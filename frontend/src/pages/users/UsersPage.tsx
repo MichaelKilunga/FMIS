@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { usersApi } from '../../services/api'
 import type { User, PaginatedData } from '../../types'
-import { Plus, UserCheck, UserX, Loader2, Shield, Pencil, X, Check } from 'lucide-react'
+import { Plus, UserCheck, UserX, Loader2, Shield, Pencil, X, Check, Key } from 'lucide-react'
 import clsx from 'clsx'
 import toast from 'react-hot-toast'
 import Modal from '../../components/Modal'
@@ -13,17 +13,37 @@ import api from '../../services/api'
 const ROLES = ['staff', 'manager', 'director', 'tenant-admin']
 
 const roleColor: Record<string, string> = {
-  director:     'bg-purple-900/50 text-purple-400',
-  manager:      'bg-blue-900/50 text-blue-400',
-  staff:        'bg-slate-700 text-slate-300',
+  director: 'bg-purple-900/50 text-purple-400',
+  manager: 'bg-blue-900/50 text-blue-400',
+  staff: 'bg-slate-700 text-slate-300',
   'tenant-admin': 'bg-amber-900/50 text-amber-400',
 }
 
-// Inline row editor state
+// Group permissions for display
+const PERM_GROUPS: Record<string, string[]> = {
+  'Invoices': ['view-invoices', 'create-invoices', 'manage-invoices'],
+  'Transactions': ['view-transactions', 'create-transactions', 'edit-transactions', 'submit-transactions', 'post-transactions', 'delete-transactions'],
+  'Debts': ['view-debts', 'manage-debts'],
+  'Budgets': ['view-budgets', 'manage-budgets'],
+  'Bills': ['view-bills', 'manage-bills'],
+  'Approvals': ['view-approvals', 'approve-transactions', 'reject-transactions'],
+  'Reports': ['view-reports', 'export-reports'],
+  'Analytics': ['view-analytics'],
+  'Fraud': ['view-fraud-alerts', 'manage-fraud-rules'],
+  'Admin': ['manage-users', 'manage-settings', 'manage-workflows', 'view-audit-logs'],
+}
+
 interface EditState {
   userId: number
   role: string
   is_active: boolean
+  saving: boolean
+}
+
+interface PermState {
+  user: User
+  current: string[]
+  all: string[]
   saving: boolean
 }
 
@@ -34,17 +54,16 @@ export default function UsersPage() {
 
   const { register, handleSubmit: handleFormSubmit, reset } = useForm<{
     name: string; email: string; password: string; department: string; role: string; tenant_id?: number | string;
-  }>({
-    defaultValues: { role: 'staff' }
-  })
+  }>({ defaultValues: { role: 'staff' } })
 
-  const [data, setData]                     = useState<PaginatedData<User> | null>(null)
-  const [loading, setLoading]               = useState(true)
-  const [showForm, setShowForm]             = useState(false)
+  const [data, setData] = useState<PaginatedData<User> | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [showForm, setShowForm] = useState(false)
   const [isSubmittingForm, setIsSubmittingForm] = useState(false)
-  const [currentPage, setCurrentPage]       = useState(1)
-  const [tenants, setTenants]               = useState<any[]>([])
-  const [editState, setEditState]           = useState<EditState | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [tenants, setTenants] = useState<any[]>([])
+  const [editState, setEditState] = useState<EditState | null>(null)
+  const [permState, setPermState] = useState<PermState | null>(null)
 
   const load = (page = 1) => {
     setLoading(true)
@@ -76,31 +95,56 @@ export default function UsersPage() {
     }
   }
 
-  const startEdit = (u: User) => {
-    setEditState({
-      userId: u.id,
-      role: u.roles?.[0] || 'staff',
-      is_active: u.is_active,
-      saving: false,
-    })
-  }
-
+  const startEdit = (u: User) => setEditState({ userId: u.id, role: u.roles?.[0] || 'staff', is_active: u.is_active, saving: false })
   const cancelEdit = () => setEditState(null)
 
   const saveEdit = async () => {
     if (!editState) return
     setEditState(s => s ? { ...s, saving: true } : null)
     try {
-      await usersApi.update(editState.userId, {
-        role: editState.role,
-        is_active: editState.is_active,
-      })
+      await usersApi.update(editState.userId, { role: editState.role, is_active: editState.is_active })
       toast.success('User updated')
       setEditState(null)
       load(currentPage)
     } catch (e: any) {
       toast.error(e.response?.data?.message || 'Failed to update user')
       setEditState(s => s ? { ...s, saving: false } : null)
+    }
+  }
+
+  const openPermissions = async (u: User) => {
+    try {
+      const [allRes, userRes] = await Promise.all([
+        usersApi.getPermissions(),
+        usersApi.get(u.id)
+      ])
+      const allPerms = Array.isArray(allRes.data) ? allRes.data : []
+      const userPerms: string[] = (userRes.data as any)?.permissions?.map((p: any) => p.name || p) || []
+      setPermState({ user: u, current: userPerms, all: allPerms, saving: false })
+    } catch {
+      toast.error('Failed to load permissions')
+    }
+  }
+
+  const togglePerm = (perm: string) => {
+    if (!permState) return
+    setPermState(s => s ? {
+      ...s,
+      current: s.current.includes(perm) ? s.current.filter(p => p !== perm) : [...s.current, perm]
+    } : null)
+  }
+
+  const savePermissions = async () => {
+    if (!permState) return
+    setPermState(s => s ? { ...s, saving: true } : null)
+    try {
+      await usersApi.updatePermissions(permState.user.id, permState.current)
+      toast.success('Permissions updated successfully')
+      setPermState(null)
+      load(currentPage)
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || 'Failed to save permissions')
+      setPermState(s => s ? { ...s, saving: false } : null)
     }
   }
 
@@ -136,17 +180,11 @@ export default function UsersPage() {
         const isEditing = editState?.userId === u.id
         if (isEditing && canManageUsers) {
           return (
-            <select
-              id={`role-select-${u.id}`}
-              value={editState.role}
+            <select id={`role-select-${u.id}`} value={editState.role}
               onChange={e => setEditState(s => s ? { ...s, role: e.target.value } : null)}
-              className="bg-slate-800 border border-slate-600 text-white text-xs rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              autoFocus
-            >
-              {ROLES.map(r => (
-                <option key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</option>
-              ))}
-              {isSystemAdmin && <option value="super-admin">Super Admin</option>}
+              className="bg-slate-800 border border-slate-600 text-white text-xs rounded px-2 py-1" autoFocus>
+              {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+              {isSystemAdmin && <option value="super-admin">super-admin</option>}
             </select>
           )
         }
@@ -169,16 +207,10 @@ export default function UsersPage() {
         const activeVal = isEditing ? editState.is_active : u.is_active
         if (isEditing && canManageUsers) {
           return (
-            <button
-              id={`status-toggle-${u.id}`}
+            <button id={`status-toggle-${u.id}`}
               onClick={() => setEditState(s => s ? { ...s, is_active: !s.is_active } : null)}
-              className={clsx(
-                'flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full border transition-all',
-                activeVal
-                  ? 'bg-emerald-900/30 text-emerald-400 border-emerald-500/30 hover:bg-emerald-900/50'
-                  : 'bg-red-900/30 text-red-400 border-red-500/30 hover:bg-red-900/50'
-              )}
-            >
+              className={clsx('flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full border transition-all',
+                activeVal ? 'bg-emerald-900/30 text-emerald-400 border-emerald-500/30' : 'bg-red-900/30 text-red-400 border-red-500/30')}>
               {activeVal ? <UserCheck size={12} /> : <UserX size={12} />}
               {activeVal ? 'Active' : 'Inactive'}
             </button>
@@ -186,10 +218,7 @@ export default function UsersPage() {
         }
         return (
           <div className="flex items-center gap-1.5">
-            {u.is_active
-              ? <UserCheck size={14} className="text-emerald-400" />
-              : <UserX size={14} className="text-red-400" />
-            }
+            {u.is_active ? <UserCheck size={14} className="text-emerald-400" /> : <UserX size={14} className="text-red-400" />}
             <span className={clsx('text-xs', u.is_active ? 'text-emerald-400' : 'text-red-400')}>
               {u.is_active ? 'Active' : 'Inactive'}
             </span>
@@ -215,24 +244,11 @@ export default function UsersPage() {
         if (isEditing) {
           return (
             <div className="flex items-center gap-2">
-              <button
-                id={`save-user-${u.id}`}
-                onClick={saveEdit}
-                disabled={editState.saving}
-                className="p-1.5 rounded text-emerald-400 hover:bg-emerald-900/20 transition-colors border border-emerald-500/20"
-                title="Save changes"
-              >
-                {editState.saving
-                  ? <Loader2 size={14} className="animate-spin" />
-                  : <Check size={14} />
-                }
+              <button id={`save-user-${u.id}`} onClick={saveEdit} disabled={editState.saving}
+                className="p-1.5 rounded text-emerald-400 hover:bg-emerald-900/20 border border-emerald-500/20">
+                {editState.saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
               </button>
-              <button
-                id={`cancel-edit-${u.id}`}
-                onClick={cancelEdit}
-                className="p-1.5 rounded text-slate-400 hover:bg-slate-700 transition-colors"
-                title="Cancel"
-              >
+              <button id={`cancel-edit-${u.id}`} onClick={cancelEdit} className="p-1.5 rounded text-slate-400 hover:bg-slate-700">
                 <X size={14} />
               </button>
             </div>
@@ -240,25 +256,17 @@ export default function UsersPage() {
         }
         return (
           <div className="flex items-center gap-2">
-            <button
-              id={`edit-user-${u.id}`}
-              onClick={() => startEdit(u)}
-              className="p-1.5 rounded text-blue-400 hover:bg-blue-900/20 transition-colors border border-blue-500/20"
-              title="Edit role & status"
-            >
+            <button id={`edit-user-${u.id}`} onClick={() => startEdit(u)} title="Edit role & status"
+              className="p-1.5 rounded text-blue-400 hover:bg-blue-900/20 border border-blue-500/20">
               <Pencil size={14} />
             </button>
-            <button
-              id={`toggle-status-${u.id}`}
-              onClick={() => toggleStatus(u)}
-              className={clsx(
-                'p-1.5 rounded transition-colors border',
-                u.is_active
-                  ? 'text-red-400 hover:bg-red-900/20 border-red-500/20'
-                  : 'text-emerald-400 hover:bg-emerald-900/20 border-emerald-500/20'
-              )}
-              title={u.is_active ? 'Deactivate user' : 'Activate user'}
-            >
+            <button id={`perms-user-${u.id}`} onClick={() => openPermissions(u)} title="Manage permissions"
+              className="p-1.5 rounded text-purple-400 hover:bg-purple-900/20 border border-purple-500/20">
+              <Key size={14} />
+            </button>
+            <button id={`toggle-status-${u.id}`} onClick={() => toggleStatus(u)}
+              className={clsx('p-1.5 rounded transition-colors border',
+                u.is_active ? 'text-red-400 hover:bg-red-900/20 border-red-500/20' : 'text-emerald-400 hover:bg-emerald-900/20 border-emerald-500/20')}>
               {u.is_active ? <UserX size={14} /> : <UserCheck size={14} />}
             </button>
           </div>
@@ -272,7 +280,7 @@ export default function UsersPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Users</h1>
-          <p className="text-slate-400 text-sm">Manage team members, roles and access</p>
+          <p className="text-slate-400 text-sm">Manage team members, roles and granular access</p>
         </div>
         {canManageUsers && (
           <button id="add-user-btn" onClick={() => setShowForm(true)} className="btn-primary">
@@ -284,37 +292,20 @@ export default function UsersPage() {
       {canManageUsers && (
         <div className="glass-card p-3 flex items-center gap-2 text-xs text-slate-400 border-l-2 border-blue-500">
           <Shield size={14} className="text-blue-400 shrink-0" />
-          Click the <Pencil size={11} className="inline mx-0.5" /> icon on any user to change their role or toggle their active status.
+          Use <Pencil size={11} className="inline mx-0.5" /> to change role/status · Use <Key size={11} className="inline mx-0.5" /> to set granular permissions per user
         </div>
       )}
 
-      <DataTable
-        columns={columns as any}
-        data={data}
-        loading={loading}
-        onPageChange={load}
-        emptyMessage="No users found"
-      />
+      <DataTable columns={columns as any} data={data} loading={loading} onPageChange={load} emptyMessage="No users found" />
 
+      {/* Add User Modal */}
       <Modal isOpen={showForm} onClose={() => setShowForm(false)} title="Add User">
         <form onSubmit={handleFormSubmit(onSubmitForm)} className="space-y-4">
-          <div>
-            <label className="fmis-label">Full Name</label>
-            <input {...register('name', { required: true })} className="fmis-input" placeholder="John Doe" />
-          </div>
-          <div>
-            <label className="fmis-label">Email Address</label>
-            <input type="email" {...register('email', { required: true })} className="fmis-input" placeholder="john@example.com" />
-          </div>
-          <div>
-            <label className="fmis-label">Password</label>
-            <input type="password" {...register('password', { required: true, minLength: 8 })} className="fmis-input" placeholder="••••••••" />
-          </div>
+          <div><label className="fmis-label">Full Name</label><input {...register('name', { required: true })} className="fmis-input" placeholder="John Doe" /></div>
+          <div><label className="fmis-label">Email Address</label><input type="email" {...register('email', { required: true })} className="fmis-input" placeholder="john@example.com" /></div>
+          <div><label className="fmis-label">Password</label><input type="password" {...register('password', { required: true, minLength: 8 })} className="fmis-input" placeholder="••••••••" /></div>
           <div className={clsx("grid gap-4", isSystemAdmin ? "grid-cols-3" : "grid-cols-2")}>
-            <div>
-              <label className="fmis-label">Department</label>
-              <input {...register('department')} className="fmis-input" placeholder="e.g., Finance" />
-            </div>
+            <div><label className="fmis-label">Department</label><input {...register('department')} className="fmis-input" placeholder="e.g., Finance" /></div>
             <div>
               <label className="fmis-label">Role</label>
               <select {...register('role')} className="fmis-select">
@@ -330,9 +321,7 @@ export default function UsersPage() {
                 <label className="fmis-label">Tenant</label>
                 <select {...register('tenant_id')} className="fmis-select">
                   <option value="">System (No Tenant)</option>
-                  {tenants.map(t => (
-                    <option key={t.id} value={t.id}>{t.name}</option>
-                  ))}
+                  {tenants.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                 </select>
               </div>
             )}
@@ -345,6 +334,59 @@ export default function UsersPage() {
           </div>
         </form>
       </Modal>
+
+      {/* Permission Editor Modal */}
+      {permState && (
+        <Modal isOpen={!!permState} onClose={() => setPermState(null)} title={`Permissions: ${permState.user.name}`}>
+          <div className="space-y-4 max-h-[65vh] overflow-y-auto pr-1">
+            <div className="bg-amber-900/20 border border-amber-500/30 rounded-lg p-3 text-xs text-amber-300">
+              <Shield size={12} className="inline mr-1" />
+              These are <strong>direct user permissions</strong> that extend or override the user's role defaults. The user's role (<strong>{permState.user.roles?.[0]}</strong>) already grants a base set.
+            </div>
+
+            {Object.entries(PERM_GROUPS).map(([group, perms]) => {
+              // only show permissions that exist in the system
+              const available = perms.filter(p => permState.all.includes(p))
+              if (!available.length) return null
+              return (
+                <div key={group} className="glass-card p-4">
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">{group}</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {available.map(perm => {
+                      const active = permState.current.includes(perm)
+                      return (
+                        <button key={perm} type="button" onClick={() => togglePerm(perm)}
+                          className={clsx(
+                            'flex items-center gap-2 text-xs px-3 py-2 rounded-lg border transition-all text-left',
+                            active
+                              ? 'bg-blue-900/40 border-blue-500/50 text-blue-300'
+                              : 'bg-slate-800/40 border-slate-700/50 text-slate-400 hover:border-slate-600'
+                          )}>
+                          <div className={clsx('w-3 h-3 rounded-sm border flex-shrink-0 flex items-center justify-center',
+                            active ? 'bg-blue-500 border-blue-400' : 'border-slate-600')}>
+                            {active && <Check size={9} className="text-white" />}
+                          </div>
+                          <span className="truncate">{perm.replace(/-/g, ' ')}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+          <div className="flex justify-between items-center pt-4 border-t border-slate-700/50 mt-4">
+            <button onClick={() => setPermState(s => s ? { ...s, current: [] } : null)}
+              className="text-xs text-slate-500 hover:text-red-400 transition-colors">Clear all direct perms</button>
+            <div className="flex gap-3">
+              <button onClick={() => setPermState(null)} className="btn-ghost">Cancel</button>
+              <button onClick={savePermissions} disabled={permState.saving} className="btn-primary">
+                {permState.saving ? <Loader2 size={16} className="animate-spin" /> : <><Key size={14} /> Save Permissions</>}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   )
 }

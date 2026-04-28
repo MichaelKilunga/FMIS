@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { invoicesApi, clientsApi } from '../../services/api'
 import type { Invoice, PaginatedResponse, Client } from '../../types'
-import { Plus, Download, Send, FileText, Loader2, Trash2, X, CheckCircle } from 'lucide-react'
+import { Plus, Download, Send, Loader2, Trash2, X, CheckCircle } from 'lucide-react'
 import { format } from 'date-fns'
 import toast from 'react-hot-toast'
 import Modal from '../../components/Modal'
@@ -44,7 +44,7 @@ export default function InvoicesPage() {
   const { formatCurrency, defaultCurrency } = useCurrency()
 
   const [clients, setClients] = useState<Client[]>([])
-  
+
   const multiEnabled = settings['currency.multi_enabled'] === 'true'
   const manualRatesStr = (settings['currency.manual_rates'] as string) || '{}'
 
@@ -92,28 +92,28 @@ export default function InvoicesPage() {
 
   const [currentPage, setCurrentPage] = useState(1)
 
+  // Check if the current user can manage invoices (role-based OR permission-based)
+  const canManageInvoices =
+    user?.roles?.includes('tenant-admin') ||
+    user?.roles?.includes('director') ||
+    user?.permissions?.includes('manage-invoices') ||
+    user?.permissions?.includes('create-invoices')
+
   const load = async (page = 1) => {
     setLoading(true)
-    try { 
+    try {
       const res = await invoicesApi.list({ page })
       setData(res.data)
       setCurrentPage(page)
-
-      // Also load clients for the form
       const cRes = await clientsApi.list({ per_page: 100 })
       setClients(Array.isArray(cRes.data?.data) ? cRes.data.data : [])
     }
     catch { toast.error('Failed to load data') } finally { setLoading(false) }
   }
 
-  useEffect(() => { 
-    load(1) 
-
-    const handleSyncComplete = () => {
-      console.log('Sync completed, reloading invoices data...')
-      load(currentPage)
-    }
-
+  useEffect(() => {
+    load(1)
+    const handleSyncComplete = () => load(currentPage)
     window.addEventListener('fmis-sync-completed', handleSyncComplete)
     return () => window.removeEventListener('fmis-sync-completed', handleSyncComplete)
   }, [currentPage])
@@ -160,6 +160,21 @@ export default function InvoicesPage() {
       load(currentPage)
     } catch {
       toast.error('Failed to mark as paid')
+    }
+  }
+
+  const deleteInvoice = async (inv: Invoice) => {
+    if (!['draft', 'cancelled'].includes(inv.status)) {
+      toast.error('Only draft or cancelled invoices can be deleted.')
+      return
+    }
+    if (!confirm(`Delete invoice #${inv.number}? This cannot be undone.`)) return
+    try {
+      await invoicesApi.delete(inv.id)
+      toast.success('Invoice deleted')
+      load(currentPage)
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || 'Failed to delete invoice')
     }
   }
 
@@ -253,16 +268,23 @@ export default function InvoicesPage() {
             className="p-1.5 rounded text-slate-400 hover:text-blue-400 hover:bg-blue-900/20 transition-colors">
             <Download size={14} />
           </button>
-          {inv.status === 'draft' && (
+          {inv.status === 'draft' && canManageInvoices && (
             <button onClick={() => sendInvoice(inv.id)} title="Mark as sent"
               className="p-1.5 rounded text-slate-400 hover:text-emerald-400 hover:bg-emerald-900/20 transition-colors">
               <Send size={14} />
             </button>
           )}
-          {inv.status !== 'paid' && user?.roles?.includes('tenant-admin') && (
+          {inv.status !== 'paid' && (user?.roles?.includes('tenant-admin') || user?.permissions?.includes('manage-invoices')) && (
             <button onClick={() => markAsPaid(inv.id)} title="Mark as Paid"
               className="p-1.5 rounded text-slate-400 hover:text-emerald-400 hover:bg-emerald-900/20 transition-colors">
               <CheckCircle size={14} />
+            </button>
+          )}
+          {/* Only show delete for draft / cancelled invoices */}
+          {['draft', 'cancelled'].includes(inv.status) && canManageInvoices && (
+            <button onClick={() => deleteInvoice(inv)} title="Delete invoice"
+              className="p-1.5 rounded text-slate-400 hover:text-red-400 hover:bg-red-900/20 transition-colors">
+              <Trash2 size={14} />
             </button>
           )}
         </div>
@@ -277,14 +299,14 @@ export default function InvoicesPage() {
           <h1 className="text-2xl font-bold text-white">Invoices</h1>
           <p className="text-slate-400 text-sm">Manage and track all invoices</p>
         </div>
-        {user?.roles?.includes('tenant-admin') && (
+        {canManageInvoices && (
           <button onClick={() => setShowForm(true)} className="btn-primary">
             <Plus size={16} /> New Invoice
           </button>
         )}
       </div>
 
-      <DataTable 
+      <DataTable
         columns={columns as any}
         data={data}
         loading={loading}
@@ -306,7 +328,7 @@ export default function InvoicesPage() {
                   <option value="">-- New Client --</option>
                   {(clients || []).filter(Boolean).map(c => <option key={c.id} value={c.id}>{c.name} {c.email ? `(${c.email})` : ''}</option>)}
                 </select>
-                
+
                 <label className="fmis-label">Client / Company Name <span className="text-red-400">*</span></label>
                 <input {...register('client_name', { required: 'Client name is required' })} className="fmis-input" placeholder="e.g. MR GARSON JAMES" />
               </div>

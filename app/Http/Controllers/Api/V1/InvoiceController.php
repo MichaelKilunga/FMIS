@@ -152,6 +152,11 @@ class InvoiceController extends Controller
     public function destroy(Request $request, Invoice $invoice): JsonResponse
     {
         abort_if($invoice->tenant_id !== $request->user()->tenant_id, 403);
+        abort_if(
+            !in_array($invoice->status, ['draft', 'cancelled']),
+            422,
+            'Only draft or cancelled invoices can be deleted. Submitted invoices must be cancelled first.'
+        );
         $this->audit->log('invoice_deleted', $invoice);
         $invoice->delete();
         return response()->json(['message' => 'Invoice deleted.']);

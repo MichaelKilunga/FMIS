@@ -89,9 +89,10 @@ class DebtController extends Controller
     {
         abort_if($debt->tenant_id !== $request->user()->tenant_id, 403);
 
+        $maxAmount = round((float) $debt->remaining_amount, 2);
         $data = $request->validate([
-            'amount'       => "required|numeric|min:0.01|max:{$debt->remaining_amount}",
-            'account_id'   => 'nullable|exists:accounts,id',
+            'amount'       => "required|numeric|min:0.01|max:{$maxAmount}",
+            'account_id'   => 'nullable|integer|exists:accounts,id',
             'payment_date' => 'nullable|date',
             'notes'        => 'nullable|string',
         ]);
